@@ -21,6 +21,7 @@ out/
 dist/
 coverage/
 .eslintcache
+*.tsbuildinfo
 
 # Editors and operating systems
 .vscode/*

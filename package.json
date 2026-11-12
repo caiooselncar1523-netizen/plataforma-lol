@@ -1,0 +1,37 @@
+{
+  "name": "ahriademia",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n web,worker \"npm:dev:web\" \"npm:dev:worker\"",
+    "dev:web": "next dev",
+    "dev:worker": "tsx watch worker/index.ts",
+    "build": "next build",
+    "start": "next start",
+    "start:worker": "tsx worker/index.ts",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "prisma generate",
+    "db:validate": "prisma validate",
+    "db:migrate": "prisma migrate dev"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.0",
+    "dotenv": "^16.6.1",
+    "next": "^15.5.29",
+    "pg-boss": "^12.38.2",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "concurrently": "^9.2.1",
+    "prisma": "^6.19.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3"
+  }
+}

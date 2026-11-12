@@ -1,6 +1,6 @@
 # Documento de Requisitos de Software (DRS)
 
-**Projeto:** Ahriademia — Plataforma de Análise de League of Legends **Versão:** 1.0 **Data:** 12/11/2026 **Status:** Planejamento e preparação (épico 0 em andamento)
+**Projeto:** Ahriademia — Plataforma de Análise de League of Legends **Versão:** 1.1 **Data:** 12/11/2026 **Status:** Fundação técnica em andamento (T-014)
 
 ---
 
@@ -621,7 +621,7 @@ A chave de produção pode demorar. Um produto público não pode rodar com a ch
 
 | # | Tarefa | Depende | Esf. | Pronto quando | Status |
 | --- | --- | --- | --- | --- | --- |
-| T-014 | Configurar a fundação do backend, PostgreSQL, Prisma, pg-boss, worker Node.js e ambiente local (Docker) | T-006 | M | Banco, aplicação e worker iniciam localmente | ☐ |
+| T-014 | Configurar a fundação do backend, PostgreSQL, Prisma, pg-boss, worker Node.js e ambiente local (Docker) | T-006 | M | Banco, aplicação e worker iniciam localmente | ◐ |
 | T-015 | Configurar o frontend (Next.js), layout base, tema claro e escuro e textos em português | T-006, T-010 | M | Esqueleto do site rodando | ☐ |
 | T-016 | Cliente da API da Riot no worker, com controle de taxa, novas tentativas e registro de erros | T-002, T-014 | M | Chamadas do worker respeitam os limites e registram falhas | ☐ |
 | T-017 | Importar dados estáticos do Data Dragon (campeões, itens, runas, imagens) e atualizar a cada patch | T-014 | M | Dados do patch atual no banco | ☐ |
@@ -945,6 +945,9 @@ Esta é a estrutura-alvo do repositório. Criar as pastas conforme cada tarefa d
 ahriademia/
 ├── documentação/
 │   └── Documento de Requisitos – Plataforma de Análise de League of Legends (1).md
+├── package.json               (scripts e dependências do workspace)
+├── package-lock.json
+├── tsconfig.json
 ├── prisma/
 │   └── schema.prisma          (modelo e migrações do banco)
 ├── scripts/
@@ -952,6 +955,7 @@ ahriademia/
 ├── src/
 │   ├── app/                   (páginas e adaptadores HTTP do Next.js)
 │   │   └── api/v1/            (rotas versionadas; sem regra de negócio)
+│   │       └── health/        (verificação da conexão com o banco)
 │   ├── components/ui/         (componentes visuais reutilizáveis)
 │   ├── features/
 │   │   ├── tier-list/
@@ -1119,7 +1123,7 @@ O formulário da Riot é em inglês, por isso o texto abaixo está em inglês. A
 
 ### 22.4 Estado atual do projeto
 
-Projeto: **Ahriademia**. As tarefas T-001 e T-002 continuam pendentes pelo desenvolvedor; T-003, T-006 e T-007 estão concluídas. A T-004 está em andamento (nome e slogan definidos; os domínios pretendidos foram informados como livres; faltam registrar o domínio, reservar as redes sociais e consultar a Riot e o INPI sobre o nome). A T-005 está em andamento: repositório e documentação inicial criados; falta criar o quadro de tarefas e concluir os padrões de código. Próximas tarefas técnicas: T-014 e T-015. A validação definitiva da identidade (T-004) continua necessária antes da divulgação pública e da landing.
+Projeto: **Ahriademia**. As tarefas T-001 e T-002 continuam pendentes pelo desenvolvedor; T-003, T-006 e T-007 estão concluídas. A T-004 está em andamento (nome e slogan definidos; os domínios pretendidos foram informados como livres; faltam registrar o domínio, reservar as redes sociais e consultar a Riot e o INPI sobre o nome). A T-005 está em andamento: repositório e documentação inicial criados; falta criar o quadro de tarefas e concluir os padrões de código. A T-014 está em andamento: esqueleto da aplicação, acesso ao PostgreSQL, worker, fila e Docker Compose preparados; falta validar a inicialização integrada com o Docker ativo. Depois vêm T-015 e as demais tarefas, respeitando dependências. A validação definitiva da identidade (T-004) continua necessária antes da divulgação pública e da landing.
 
 ### 22.5 Histórico de revisões (continuação)
 
@@ -1135,3 +1139,4 @@ Projeto: **Ahriademia**. As tarefas T-001 e T-002 continuam pendentes pelo desen
 | 0.8 | 21/10/2026 | Situação atualizada com o trabalho feito no repositório: T-005 em andamento (quadro de tarefas pendente) e T-006 concluída |
 | 0.9 | 21/10/2026 | Alinhamento dos status do backlog principal com a situação do épico 0 e correção da versão do documento |
 | 1.0 | 12/11/2026 | Definição da arquitetura de monólito modular com worker separado, fluxos assíncronos, limites entre módulos e estrutura-alvo do repositório; alinhamento do README e das convenções |
+| 1.1 | 12/11/2026 | Início da T-014: esqueleto web/API, Prisma, worker pg-boss, PostgreSQL local com Docker Compose e instruções de execução |

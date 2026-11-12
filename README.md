@@ -8,8 +8,8 @@ personalizadas.
 
 ## Estado do projeto
 
-O projeto está na preparação da fundação técnica. A implementação do backend,
-frontend e banco de dados começa nas tarefas T-014 e T-015 do backlog.
+A fundação técnica (T-014) está em andamento. O layout e o tema do frontend
+serão desenvolvidos na tarefa T-015, depois da fundação.
 
 O planejamento e a arquitetura estão no
 [documento de requisitos](documentação/Documento%20de%20Requisitos%20%E2%80%93%20Plataforma%20de%20An%C3%A1lise%20de%20League%20of%20Legends%20%281%29.md).
@@ -41,9 +41,21 @@ as tarefas correspondentes do backlog.
 
 ## Desenvolvimento
 
-Os comandos de instalação e execução serão adicionados junto à configuração da
-aplicação e do worker nas tarefas T-014 e T-015. Nunca copie chaves reais para
-arquivos versionados; use o `.env` local baseado em `.env.example`.
+Requisitos: Node.js 22.12 ou superior, npm e Docker Desktop ativo. No
+PowerShell do Windows, use `npm.cmd` nos comandos abaixo se a política do sistema
+bloquear `npm.ps1`.
+
+1. Copie `.env.example` para `.env`: `Copy-Item .env.example .env`.
+2. Instale as dependências: `npm.cmd install`.
+3. Inicie o PostgreSQL: `docker compose up -d db`.
+4. Gere o cliente do Prisma: `npm.cmd run db:generate`.
+5. Inicie a aplicação e o worker: `npm.cmd run dev`.
+
+A interface técnica inicial fica em `http://localhost:3000`; o endpoint
+`http://localhost:3000/api/v1/health` verifica a conexão com o banco. O worker e
+a aplicação podem ser iniciados separadamente com `npm.cmd run dev:worker` e
+`npm.cmd run dev:web`. Nunca copie chaves reais para arquivos versionados; use o
+`.env` local baseado em `.env.example`.
 
 ## Licença
 
