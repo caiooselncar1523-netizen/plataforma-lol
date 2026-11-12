@@ -22,15 +22,17 @@ Use Conventional Commits:
 
 - Variáveis, funções, classes, tabelas e commits devem usar nomes em inglês.
 - Textos exibidos ao usuário devem estar em português do Brasil.
-- Python deve ser tipado e validado pelo Ruff.
+- Python só será introduzido para machine learning na fase 5; quando isso ocorrer, deve ser tipado e validado pelo Ruff.
 - TypeScript deve usar modo estrito, ESLint e Prettier.
-- Toda alteração de schema deve usar migração Alembic.
+- Toda alteração do banco deve usar migração Prisma.
 - Erros devem ser explícitos e seguir o padrão de logging da camada.
+- Rotas HTTP validam entradas e delegam regras de negócio aos módulos da aplicação.
+- Tarefas demoradas e chamadas Riot em produção são processadas pelo worker, não dentro de requisições web.
 
 ## Segurança e dados
 
 - Nunca versionar chaves, senhas ou dados pessoais.
-- Todas as chamadas à Riot devem passar pelo cliente central do backend.
+- Todas as chamadas à Riot em produção devem passar pelo cliente central do worker.
 - Não expor no navegador dados que o jogador não conheceria durante a partida.
 - Validar entradas na borda da aplicação e aplicar as regras de privacidade da
   LGPD.

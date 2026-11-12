@@ -1,6 +1,6 @@
 # Documento de Requisitos de Software (DRS)
 
-**Projeto:** Plataforma de Análise de League of Legends (tier list, perfil, análise com IA e partida ao vivo) **Versão:** 0.1 (rascunho inicial) **Data:** 14/10/2026 **Status:** Levantamento de requisitos
+**Projeto:** Ahriademia — Plataforma de Análise de League of Legends **Versão:** 1.0 **Data:** 12/11/2026 **Status:** Planejamento e preparação (épico 0 em andamento)
 
 ---
 
@@ -261,18 +261,30 @@ Este é o **principal diferencial** do produto.
 
 ## 7. Arquitetura proposta (visão geral)
 
-**Camadas:**
+A primeira versão será um **monólito modular com um processo worker separado**, no mesmo repositório. Não haverá microserviços: módulos organizados por domínio e limites claros entre interface, regras de negócio e integrações permitem começar simples sem impedir evolução.
 
-1. **Coletor de dados:** workers que consultam a API da Riot, com fila e controle de taxa.
-2. **Armazenamento:** banco relacional (PostgreSQL) para partidas e estatísticas, mais cache (Redis) para respostas rápidas.
-3. **Processamento:** jobs agendados que agregam estatísticas, calculam benchmarks e tiers.
-4. **Motor de análise:** regras e estatística (fase 3), com modelos de machine learning (fase 5).
-5. **Camada de IA generativa:** recebe métricas e pontos fracos já calculados e produz o texto de análise.
-6. **API do backend:** entrega dados ao frontend (Node.js ou Python/FastAPI).
-7. **Frontend:** Next.js/React, responsivo.
-8. **Hospedagem:** front em Vercel ou Netlify; backend e banco em Railway, Render ou VPS.
+### 7.1 Componentes
 
-**Fluxo resumido de uma análise:** usuário busca o Riot ID, o backend consulta o cache, caso não haja dados atualizados enfileira a coleta, calcula as métricas, compara com os benchmarks, envia os resultados ao LLM e devolve o texto e os gráficos ao usuário.
+1. **Aplicação web (Next.js):** interface responsiva e API HTTP. Valida entradas, aplica autorização quando houver conta e chama casos de uso do servidor. Não acessa a Riot diretamente.
+2. **Worker (Node.js/TypeScript):** processo de longa duração que consome a fila pg-boss. É o único componente da aplicação que consulta a API da Riot em produção; controla taxa, novas tentativas e sincronização.
+3. **PostgreSQL:** fonte persistente dos dados do produto. Prisma define o esquema e as migrações; pg-boss usa o mesmo banco para tarefas duráveis. Redis não faz parte da arquitetura inicial.
+4. **Módulos de domínio e aplicação:** regras de campeões, partidas, benchmarks, tier list e análise. Os cálculos são determinísticos e independentes do LLM.
+5. **Integrações externas:** API da Riot e Data Dragon para dados do jogo; provedor de LLM apenas para transformar métricas calculadas em explicações. Nenhuma chave ou integração privilegiada chega ao navegador.
+6. **Machine learning (fase 5):** componente futuro, fora do caminho crítico das requisições. Só será adicionado quando houver dados e uma necessidade comprovada; não terá acesso direto ao banco de produção sem uma decisão explícita de segurança e arquitetura.
+
+### 7.2 Fluxos principais
+
+- **Busca e atualização de perfil:** o navegador envia Riot ID e região à API; a API valida, aplica limites de solicitação e o intervalo mínimo por jogador, e então enfileira uma atualização. O worker consulta a Riot, salva os dados e atualiza o estado da tarefa. A interface exibe dados em cache quando disponíveis e informa quando uma atualização está pendente.
+- **Tier list:** o worker coleta e agrega dados em segundo plano; a API consulta estatísticas já persistidas e entrega filtros e resultados. A requisição da página não dispara uma varredura da Riot.
+- **Análise pós-jogo:** a API solicita ou enfileira a análise e responde com o estado atual. O worker calcula métricas e benchmark, valida os dados enviados ao LLM e salva o resultado. A interface acompanha o estado e apresenta as métricas mesmo se o provedor de LLM estiver indisponível.
+- **Fila e falhas:** tarefas devem ser idempotentes, ter tentativas limitadas com espera progressiva e registrar falhas observáveis. A chave de idempotência e as restrições únicas no banco evitam duplicar partidas e análises.
+
+### 7.3 Limites e implantação
+
+- A aplicação web e o worker são processos implantáveis separadamente, mas compartilham o mesmo repositório, tipos e módulos de negócio.
+- O worker é a única origem das chamadas à Riot em produção. Inicialmente, manter uma instância lógica do worker por chave/região para que o controle de taxa seja centralizado; escalar instâncias exige rate limiter distribuído.
+- O navegador nunca acessa PostgreSQL, fila, Riot ou LLM diretamente.
+- Hospedagem proposta: Vercel para a aplicação web, Neon ou Supabase para PostgreSQL e Railway ou Render para o worker. A decisão final de provedores fica para T-018.
 
 ---
 
@@ -444,7 +456,7 @@ Os testes acompanham cada fase. Quanto mais cedo um erro for achado, mais barato
 2. **Modelo de negócio:** gratuito com anúncios, plano premium, ou os dois? Quais recursos ficam no plano pago (sugestão: chat de coach e análises ilimitadas)?
 3. **Orçamento mensal** de infraestrutura e de LLM.
 4. **Equipe:** quem desenvolve, quem cuida dos dados e quem faz o design?
-5. **Escolha da stack** (Node.js ou Python no backend).
+5. **Escolha da stack** (decidida: TypeScript no site e na API, Python apenas para machine learning; ver seção 21).
 6. **Regiões atendidas** além do BR.
 7. **Modos de jogo** incluídos (apenas ranqueada, ou também ARAM e outros).
 8. **Prazos** de cada fase.
@@ -588,11 +600,11 @@ A chave de produção pode demorar. Um produto público não pode rodar com a ch
 | --- | --- | --- | --- | --- | --- |
 | T-001 | Entrar no portal de desenvolvedores da Riot e gerar a chave de desenvolvimento | — | P | Chave visível no painel | ☐ |
 | T-002 | Testar chamadas: Riot ID para PUUID, elo e últimas partidas, com um script simples | T-001 | P | Dados aparecem no terminal | ☐ |
-| T-003 | Ler a documentação e as políticas da Riot (uso de dados, aviso obrigatório, limites) e anotar as regras | T-001 | P | Resumo das regras salvo | ☐ |
-| T-004 | Definir o nome do projeto, verificar domínio e redes sociais | — | M | Nome e domínio escolhidos | ☐ |
-| T-005 | Criar o repositório Git, o quadro de tarefas (copiar este backlog) e padrões de código | — | P | Repositório e quadro criados | ☐ |
-| T-006 | Decidir a stack (backend, banco e hospedagem) e registrar a decisão | T-003 | P | Stack documentada | ☐ |
-| T-007 | Rascunhar a descrição do produto para o pedido da chave de produção (usar as seções 1, 2 e 12) | T-003, T-004 | P | Texto pronto para o formulário | ☐ |
+| T-003 | Ler a documentação e as políticas da Riot (uso de dados, aviso obrigatório, limites) e anotar as regras | — | P | Resumo das regras salvo | ☑ |
+| T-004 | Definir o nome do projeto, verificar domínio e redes sociais | — | M | Nome e domínio escolhidos | ◐ |
+| T-005 | Criar o repositório Git, o quadro de tarefas (copiar este backlog) e padrões de código | — | P | Repositório e quadro criados | ◐ |
+| T-006 | Decidir a stack (backend, banco e hospedagem) e registrar a decisão | T-003 | P | Stack documentada | ☑ |
+| T-007 | Rascunhar a descrição do produto para o pedido da chave de produção (usar as seções 1, 2 e 12) | T-003, T-004 | P | Texto pronto para o formulário | ☑ |
 
 ### 19.4 Épico 1: Design no Figma
 
@@ -609,9 +621,9 @@ A chave de produção pode demorar. Um produto público não pode rodar com a ch
 
 | # | Tarefa | Depende | Esf. | Pronto quando | Status |
 | --- | --- | --- | --- | --- | --- |
-| T-014 | Configurar backend, banco de dados e ambiente local (Docker) | T-006 | M | Projeto roda na sua máquina | ☐ |
+| T-014 | Configurar a fundação do backend, PostgreSQL, Prisma, pg-boss, worker Node.js e ambiente local (Docker) | T-006 | M | Banco, aplicação e worker iniciam localmente | ☐ |
 | T-015 | Configurar o frontend (Next.js), layout base, tema claro e escuro e textos em português | T-006, T-010 | M | Esqueleto do site rodando | ☐ |
-| T-016 | Cliente da API da Riot com controle de taxa, novas tentativas e registro de erros | T-002, T-014 | M | Chamadas respeitam o limite sem erro | ☐ |
+| T-016 | Cliente da API da Riot no worker, com controle de taxa, novas tentativas e registro de erros | T-002, T-014 | M | Chamadas do worker respeitam os limites e registram falhas | ☐ |
 | T-017 | Importar dados estáticos do Data Dragon (campeões, itens, runas, imagens) e atualizar a cada patch | T-014 | M | Dados do patch atual no banco | ☐ |
 | T-018 | Ambiente de teste (staging) protegido por senha, publicação automática e testes automáticos (CI) | T-014, T-015 | M | Cada alteração publica no teste | ☐ |
 | T-019 | Monitoramento de erros, logs e backup automático do banco | T-018 | P | Alertas e backups funcionando | ☐ |
@@ -865,54 +877,57 @@ A ordem abaixo é intencional: **moderação primeiro, recursos sociais depois.*
 
 ## 21. Stack tecnológica e convenções do projeto (tarefa T-006)
 
-**Status da decisão:** recomendação provisória. Deve ser confirmada pelo desenvolvedor responsável (ver 21.9) antes do início da tarefa T-014.
+**Status da decisão:** stack decidida em 20/10/2026; arquitetura modular web + worker definida em 12/11/2026. Esta versão substitui a recomendação anterior (Python + FastAPI no backend), com o objetivo de manter o desenvolvimento simples.
 
 ### 21.1 Resumo da decisão
 
-- **Backend em Python (FastAPI):** coleta de dados da Riot, API, cálculos, análise e IA ficam na mesma linguagem.
-- **Frontend em TypeScript (Next.js):** o site que o jogador usa no navegador.
-- **Banco PostgreSQL**, com Redis para cache e fila.
-- **Texto da análise** gerado por um modelo de linguagem (API do Claude). **Machine learning** próprio (fase 5) em Python.
-- Por que Python no backend: o machine learning da fase 5 exige Python de qualquer forma, então usar a mesma linguagem no restante evita manter dois ecossistemas no servidor.
+- **TypeScript** no site, na API, no worker de coleta e nas chamadas ao modelo de linguagem que escreve o texto da análise.
+- **Python** só será considerado para machine learning na fase 5, se houver necessidade comprovada. Não faz parte da primeira versão nem acessará diretamente o banco de produção.
+- **Monólito modular:** site e API em Next.js; worker em Node.js separado como processo, no mesmo repositório. Ambos reutilizam os módulos de domínio e aplicação.
+- **PostgreSQL com Prisma.** A fila de tarefas usa pg-boss, dentro do próprio PostgreSQL, então não é preciso Redis no início.
+- **Por que assim:** uma linguagem cobre o produto inicial, o worker mantém tarefas demoradas fora das requisições web, e módulos com limites claros evitam a complexidade prematura de microserviços.
 
 ### 21.2 Fluxo geral
 
 ```
-API da Riot  ->  Coletores (Python)  ->  PostgreSQL  ->  API (FastAPI)  ->  Site (Next.js)
-                                                |
-                                  Redis (cache e fila)    LLM (texto da análise)
+Jogador -> Next.js (interface + API) -> PostgreSQL / pg-boss -> Worker (TypeScript) -> API da Riot
+               ^                              |                       |
+               |                              +<-- dados/resultados --+
+               +----------- lê dados persistidos e estado da tarefa --+
 ```
 
-Quando o jogador pede uma análise, a API calcula as métricas, compara com os benchmarks, envia os resultados ao LLM e devolve texto e gráficos ao site.
+O worker também processa agregações e análises. Para análise pós-jogo, calcula e persiste métricas primeiro; só então solicita ao LLM uma explicação estruturada. A interface consulta o estado e apresenta o resultado quando estiver pronto. Assim, lentidão ou indisponibilidade da Riot/LLM não mantém uma requisição web aberta nem impede a exibição dos dados já calculados.
 
 ### 21.3 Ferramentas, linguagens e bibliotecas
 
 | Camada | Ferramenta | Como é usada | Fase |
 | --- | --- | --- | --- |
 | Design | Figma | Telas, design system e protótipo (também usado no pedido da chave à Riot) | 0 |
-| Site | Next.js (React) + TypeScript | Páginas, filtros, tier list, perfil; páginas otimizadas para SEO | 1 |
-| Estilo | Tailwind CSS | Visual responsivo, temas claro e escuro | 1 |
+| Linguagem | TypeScript (Node.js LTS) | Site, API, worker e chamadas ao modelo de linguagem | 1 |
+| Site e API | Next.js (React) | Páginas, rotas de API e SEO, em um único projeto | 1 |
+| Estilo | Tailwind CSS + shadcn/ui | Visual responsivo, temas claro e escuro, componentes prontos | 1 |
 | Textos em português | next-intl | Organiza os textos do site e facilita traduções futuras | 1 |
-| Gráficos | Recharts (ou ECharts) | Gráfico de ouro, evolução e notas | 3 |
-| API | Python + FastAPI | Entrega dados ao site (tier list, perfil, análise) | 1 |
-| Cliente da Riot | httpx | Módulo próprio com controle de taxa de requisições e novas tentativas; o script teste\_riot.py é a base | 1 |
-| Banco de dados | PostgreSQL | Partidas, estatísticas, benchmarks, usuários | 1 |
-| Acesso ao banco | SQLAlchemy + Alembic | Define as tabelas e controla as mudanças (migrações) | 1 |
-| Tarefas em segundo plano | Celery + Redis (ou ARQ, mais leve) | Coletam partidas, agregam estatísticas e geram análises sem travar o site | 1 a 2 |
-| Cache e fila | Redis | Guarda respostas prontas e organiza a fila de pedidos à Riot | 2 |
-| Cálculos e análise | SQL + pandas | Benchmarks, tiers e padrões do jogador | 1 a 4 |
-| Texto da análise | SDK Python anthropic (API do Claude) | Recebe as métricas já calculadas e escreve o texto em português | 3 |
-| Machine learning | scikit-learn / XGBoost; Jupyter para exploração | Descobre o que mais pesa na vitória e prioriza os conselhos | 5 |
-| Login | Auth.js ou Supabase Auth | Cadastro e login; depois o login oficial da Riot (RSO) | 4 |
-| Bot de Discord | discord.py | Comandos de perfil, última partida e análise | 5 |
-| Imagens de compartilhamento | Satori / @vercel/og | Cria o card da análise para Discord e WhatsApp | 4 |
+| Validação | Zod | Valida os dados vindos da Riot e das rotas da API | 1 |
+| Banco de dados | PostgreSQL | Partidas, estatísticas, benchmarks e usuários. Local: Docker. Produção: Neon ou Supabase | 1 |
+| Acesso ao banco | Prisma | Define as tabelas, controla as migrações e faz as consultas | 1 |
+| Coleta de dados | Worker em TypeScript (pasta `worker/`) | Coleta partidas, agrega estatísticas e gera análises em segundo plano | 1 |
+| Fila de tarefas | pg-boss | Fila dentro do próprio PostgreSQL, sem Redis | 1 |
+| Cliente da Riot | `fetch` do Node + Bottleneck | Módulo único com controle de limite de requisições e novas tentativas; o script `scripts/teste-riot.mjs` é a base | 1 |
+| Cache | Cache do Next.js e tabelas no PostgreSQL | Redis só entra se a medição de uso mostrar necessidade | 2 |
+| Cálculos e análise | TypeScript (`src/features/*/domain`) + SQL | Benchmarks, tiers, métricas e padrões do jogador; regras puras testáveis | 1 a 4 |
+| Gráficos | Recharts | Gráfico de ouro, evolução e notas | 3 |
+| Texto da análise | SDK TypeScript do Claude (`@anthropic-ai/sdk`) | Recebe as métricas já calculadas e escreve o texto em português | 3 |
+| IA própria (machine learning) | Python: scikit-learn ou XGBoost, com Jupyter (pasta `ml/`) | Descobre o que mais pesa na vitória e prioriza os conselhos | 5 |
+| Login | Auth.js | Cadastro e login; depois o login oficial da Riot (RSO) | 4 |
+| Bot de Discord | discord.js | Comandos de perfil, última partida e análise | 5 |
+| Imagens de compartilhamento | @vercel/og (Satori) | Cria o card da análise para Discord e WhatsApp | 4 |
 | E-mail | Resend (ou similar) | Confirmação de conta e resumo semanal | 4 |
 | Pagamentos | Mercado Pago, Asaas ou Stripe | Assinatura com Pix e cartão | 7 |
-| Ambiente local | Docker + Docker Compose | Sobe banco, Redis e API com um comando | 0 |
+| Ambiente local | Docker Compose | Sobe o PostgreSQL com um comando | 0 |
 | Código e automação | Git, GitHub, GitHub Actions | Versionamento e testes automáticos a cada alteração | 0 |
-| Testes | pytest (backend); Vitest e Playwright (site) | Testes unitários, de integração e de ponta a ponta | 1 em diante |
-| Qualidade de código | Ruff (Python); ESLint e Prettier (TypeScript) | Padronização e detecção de erros | 0 |
-| Hospedagem | Vercel (site); Railway, Render ou VPS (API, workers e banco) | Publicação | 1 |
+| Testes | Vitest; Playwright | Testes unitários e de ponta a ponta | 1 em diante |
+| Qualidade de código | ESLint e Prettier (Ruff na pasta `ml/`) | Padronização e detecção de erros | 0 |
+| Hospedagem | Vercel (site e API); Neon ou Supabase (banco); Railway ou Render (worker) | Publicação | 1 |
 | Segurança e velocidade | Cloudflare | DNS, proteção contra ataques e cache | 2 |
 | Monitoramento | Sentry (erros) e Uptime Kuma (disponibilidade) | Avisos quando algo quebra | 1 |
 | Métricas de uso | Plausible ou Umami | Mede visitas respeitando a LGPD | 2 |
@@ -920,42 +935,61 @@ Quando o jogador pede uma análise, a API calcula as métricas, compara com os b
 
 ### 21.4 Conjunto mínimo para a fase 1
 
-Para a tier list, usar apenas: Python + FastAPI, PostgreSQL, SQLAlchemy + Alembic, httpx, Next.js + Tailwind, Docker e Git. Redis, workers, login e demais itens só entram quando a fase correspondente pedir.
+Para a tier list, usar apenas: TypeScript com Next.js, Tailwind CSS, PostgreSQL com Prisma, um worker Node.js com pg-boss, Docker, validação com Zod e testes com Vitest. Login, e-mail, Discord, pagamentos e machine learning só entram quando a fase correspondente pedir. Não adicionar Redis nem microsserviços sem necessidade medida.
 
-### 21.5 Estrutura de pastas sugerida (monorepo)
+### 21.5 Estrutura de pastas (monorepo simples)
+
+Esta é a estrutura-alvo do repositório. Criar as pastas conforme cada tarefa do backlog, sem gerar antecipadamente diretórios vazios ou implementar funcionalidades de fases futuras.
 
 ```
-projeto/
-├── docs/
-│   └── REQUISITOS.md          (este documento)
-├── backend/
-│   ├── app/
-│   │   ├── api/               (rotas do FastAPI)
-│   │   ├── riot/              (cliente da API da Riot, controle de taxa)
-│   │   ├── models/            (tabelas do banco)
-│   │   ├── services/          (tiers, benchmarks, análise)
-│   │   └── workers/           (coletores e jobs agendados)
-│   ├── migrations/            (Alembic)
-│   └── tests/
-├── frontend/
-│   ├── src/app/               (páginas do Next.js)
-│   ├── src/components/
-│   └── messages/pt-BR.json    (textos do site)
+ahriademia/
+├── documentação/
+│   └── Documento de Requisitos – Plataforma de Análise de League of Legends (1).md
+├── prisma/
+│   └── schema.prisma          (modelo e migrações do banco)
+├── scripts/
+│   └── teste-riot.mjs         (teste manual de desenvolvimento, T-002)
+├── src/
+│   ├── app/                   (páginas e adaptadores HTTP do Next.js)
+│   │   └── api/v1/            (rotas versionadas; sem regra de negócio)
+│   ├── components/ui/         (componentes visuais reutilizáveis)
+│   ├── features/
+│   │   ├── tier-list/
+│   │   ├── players/
+│   │   ├── matches/
+│   │   └── analysis/          (cada módulo separa domain, application e ui)
+│   ├── server/
+│   │   ├── db/                (cliente Prisma e repositórios)
+│   │   ├── queue/             (publicação de tarefas pg-boss)
+│   │   ├── riot/              (cliente Riot usado pelo worker)
+│   │   └── llm/               (provedor de texto usado pelo worker)
+│   └── messages/              (textos da interface em pt-BR)
+├── worker/
+│   ├── jobs/                  (sincronização, agregação e análise)
+│   └── index.ts               (inicialização do processo worker)
+├── tests/
+│   ├── unit/
+│   ├── integration/
+│   └── e2e/
 ├── docker-compose.yml
 ├── .env.example               (modelo, sem valores reais)
 ├── .gitignore
 └── README.md
 ```
 
+As rotas HTTP validam a entrada e chamam casos de uso; não contêm consultas Riot ou cálculos complexos. `domain` contém regras sem dependência de rede ou banco, `application` coordena os casos de uso, e `server` reúne adaptadores de infraestrutura. O worker pode chamar os mesmos casos de uso sem importar componentes de interface.
+
 ### 21.6 Convenções
 
 - **Idiomas:** interface, textos de análise e documentação em português do Brasil. Nomes de variáveis, funções, tabelas e commits em inglês.
 - **Git:** branch principal protegida; uma branch por tarefa, nomeada com o número (ex.: `feat/T-036-match-history`); commits pequenos no padrão Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`).
-- **Python:** tipagem nas funções, formatação e lint com Ruff.
-- **TypeScript:** modo estrito, ESLint e Prettier.
-- **Testes:** todo cálculo de estatística, tier, benchmark e métrica de análise precisa de teste unitário.
-- **Banco:** toda mudança de tabela passa por migração (Alembic); nunca alterar o banco manualmente em produção.
-- **Dados da Riot:** sempre identificar jogadores pelo PUUID; exibir Riot ID (Nome#TAG) na interface; usar Data Dragon em pt\_BR para nomes e imagens.
+- **TypeScript:** modo estrito, ESLint e Prettier. Gerenciador de pacotes: npm.
+- **Testes:** todo cálculo de estatística, tier, benchmark e métrica de análise precisa de teste unitário (Vitest); integrações com banco/serviços externos e fluxos críticos também precisam de testes de integração ou E2E.
+- **Banco:** toda mudança de tabela passa por migração do Prisma; nunca alterar o banco manualmente em produção.
+- **Dados da Riot:** somente o worker consulta a API em produção, por meio do cliente central com controle de taxa; identificar jogadores pelo PUUID e exibir o Riot ID (Nome#TAG) na interface; usar o Data Dragon em pt\_BR para nomes e imagens.
+- **Regras de negócio:** cálculos são determinísticos e independentes do LLM; falha do LLM não apaga nem oculta métricas. Validar entradas e respostas externas com Zod e registrar erros com contexto, sem incluir chaves ou dados pessoais desnecessários.
+- **Processamento assíncrono:** jobs precisam ser idempotentes, ter política explícita de retry/backoff e estado observável; não iniciar trabalhos longos dentro de uma rota web.
+- **Machine learning:** não criar a pasta nem dependências Python antes da fase 5. Quando necessário, definir uma interface de dados própria e revisar segurança antes de conceder acesso a dados.
 
 ### 21.7 Variáveis de ambiente
 
@@ -963,51 +997,56 @@ Todas ficam em um arquivo `.env` (fora do Git). O repositório contém apenas o 
 
 | Variável | Uso |
 | --- | --- |
-| RIOT\_API\_KEY | Chave da API da Riot (nunca no código) |
-| DATABASE\_URL | Conexão com o PostgreSQL |
-| REDIS\_URL | Conexão com o Redis |
-| ANTHROPIC\_API\_KEY | Chave da API do Claude para os textos de análise |
 | APP\_ENV | development, staging ou production |
+| RIOT\_API\_KEY | Chave da API da Riot (nunca no código) |
+| POSTGRES\_USER, POSTGRES\_PASSWORD, POSTGRES\_DB | Dados do PostgreSQL local (Docker) |
+| DATABASE\_URL | Conexão com o PostgreSQL |
+| ANTHROPIC\_API\_KEY | Chave da API do Claude para os textos de análise |
 
 ### 21.8 Regras que o código sempre deve respeitar
 
-1. A chave da Riot nunca é escrita no código nem enviada ao navegador; todas as chamadas à Riot partem do backend, por HTTPS.
-2. Todas as chamadas à Riot passam pelo cliente único do projeto, que controla o limite de requisições e trata o erro 429 (respeitando o cabeçalho Retry-After).
+1. A chave da Riot nunca é escrita no código nem enviada ao navegador; todas as chamadas à Riot partem do servidor (site/API ou worker), por HTTPS.
+2. Em produção, só o worker chama a Riot, sempre pelo cliente único em `src/server/riot`; ele controla taxa e trata 429 respeitando `Retry-After`. O script de T-002 é uma exceção apenas para teste manual local.
 3. Respeitar as políticas da seção 20, em especial: não expor dados que o jogador não conheceria na partida, não ditar decisões e não criar rankings alternativos ao oficial.
 4. Exibir o aviso de que o site não é endossado pela Riot em local visível.
 5. Não usar chave de desenvolvimento para servir o público.
 
-### 21.9 Decisões em aberto sobre a stack
+### 21.9 Decisões sobre a stack
 
-| Decisão | Opções | Quando decidir |
+| Decisão | Escolha | Quando |
 | --- | --- | --- |
-| Linguagem do backend | Python (recomendado) ou Node.js, conforme a experiência do desenvolvedor | T-006 |
+| Linguagem principal | TypeScript (Python só para machine learning) | Decidida |
+| Acesso ao banco | Prisma | Decidida |
+| Fila de tarefas | pg-boss (revisar se o volume exigir Redis) | Decidida |
+| Gerenciador de pacotes | npm | Decidida |
 | Provedor de login | Auth.js ou Supabase Auth | T-062 |
-| Hospedagem do backend | Railway, Render ou VPS | T-018 |
-| Fila de tarefas | Celery + Redis ou ARQ | T-023 |
-| Biblioteca de gráficos | Recharts ou ECharts | T-052 |
+| Hospedagem do banco | Neon ou Supabase | T-018 |
+| Arquitetura | Monólito modular + worker separado no mesmo repositório | Decidida |
+| Hospedagem do worker | Railway ou Render | T-018 |
+| Biblioteca de gráficos | Recharts (padrão) ou ECharts | T-052 |
 | Gateway de pagamento | Mercado Pago, Asaas ou Stripe | T-103 |
 
 ### 21.10 Instruções para assistentes de IA que trabalharem neste repositório
 
-Esta seção orienta ferramentas de IA (editores com assistente, agentes de código) a trabalharem de forma consistente com o projeto.
+Esta seção orienta ferramentas de IA (editores com assistente, agentes de código) a trabalharem de forma consistente com o projeto. Um resumo dela está no arquivo `AGENTS.md`, na raiz do repositório.
 
-1. **Leia antes de programar:** as seções 3 a 5 (requisitos e regras), 19 (backlog), 20 (políticas da Riot) e 21 (stack e convenções).
+1. **Leia antes de programar:** as seções 3 a 5 (requisitos e regras), 19 (backlog), 20 (políticas da Riot), 21 (stack e convenções) e 22 (identidade e situação atual).
 2. **Siga a ordem do backlog (seção 19).** Trabalhe em uma tarefa por vez, na numeração T-xxx. Não antecipe tarefas de fases futuras sem pedido explícito do desenvolvedor.
 3. **Antes de implementar,** confirme a tarefa, suas dependências e o critério de pronto. Se algo estiver ambíguo ou faltar uma decisão (ver 21.9), pergunte em vez de supor.
 4. **Conflito com as políticas da Riot (seção 20):** pare e avise o desenvolvedor antes de continuar. Não implemente recursos marcados como risco alto sem confirmação.
 5. **Segurança:** nunca escreva chaves ou senhas no código, em testes ou em arquivos versionados; use variáveis de ambiente.
 6. **Qualidade:** escreva testes para toda regra de cálculo, siga as convenções da seção 21.6 e mantenha as mudanças pequenas e fáceis de revisar.
-7. **Ao concluir uma tarefa:** atualize o status (☐, ◐, ☑) na seção 19 e descreva brevemente o que foi feito e como testar.
+7. **Ao concluir uma tarefa:** atualize o status (☐, ◐, ☑) na seção 19 e a situação atual na seção 22.4, e descreva brevemente o que foi feito e como testar.
 8. **Textos para o usuário final** devem estar em português do Brasil, com tom construtivo; nunca rotular ou humilhar jogadores (RF-MD-07).
 
-**Estado atual do projeto (atualizar a cada tarefa concluída):** tarefas T-001 e T-002 em andamento; T-003 concluída (resumo na seção 20); próxima tarefa: T-004.
+A situação atual do projeto está na seção 22.4.
 
 ### 21.11 Histórico de revisões (continuação)
 
 | Versão | Data | Descrição |
 | --- | --- | --- |
-| 0.4 | 18/10/2026 | Inclusão da stack tecnológica, estrutura de pastas, convenções e instruções para assistentes de IA (seção 21) |
+| 0.4 | 18/10/2026 | Primeira versão da stack tecnológica, estrutura de pastas, convenções e instruções para assistentes de IA (seção 21) |
+| 0.6 | 20/10/2026 | Stack revisada para TypeScript em todo o projeto, com Python apenas para machine learning; esqueleto do repositório e script de teste em Node.js |
 
 ---
 
@@ -1017,15 +1056,15 @@ Esta seção orienta ferramentas de IA (editores com assistente, agentes de cód
 
 | Item | Definição |
 | --- | --- |
-| Nome | **Veyron** |
-| Slogan | **Evolua além do seu elo** |
-| Aviso obrigatório da Riot (texto sugerido) | *Veyron não é endossado pela Riot Games e não reflete as opiniões de pessoas oficialmente envolvidas na produção ou no gerenciamento das propriedades da Riot Games. Riot Games e todas as propriedades associadas são marcas comerciais ou registradas da Riot Games, Inc.* |
+| Nome | **Ahriademia** |
+| Slogan | **Sua academia para evoluir no Rift.** |
+| Aviso obrigatório da Riot (texto sugerido) | *Ahriademia não é endossado pela Riot Games e não reflete as opiniões de pessoas oficialmente envolvidas na produção ou no gerenciamento das propriedades da Riot Games. Riot Games e todas as propriedades associadas são marcas comerciais ou registradas da Riot Games, Inc.* |
 
 **Pendências da T-004 (precisam ser feitas pelo desenvolvedor):**
 
-1. Verificar a disponibilidade do domínio (ex.: veyron.com.br no Registro.br, veyron.gg e veyron.com.br como alternativas).
+1. Registrar o domínio (o desenvolvedor informou que os domínios estão livres; ex.: ahriademia.com.br no Registro.br, com ahriademia.gg ou ahriademia.com como alternativas).
 2. Verificar e reservar os nomes nas redes sociais (Instagram, X, TikTok, YouTube, Discord).
-3. Pesquisar o nome na base de marcas do INPI, para checar se já existe registro em classes parecidas (software e serviços online). A palavra Veyron é muito associada a um modelo de carro de uma marca conhecida, então vale confirmar com um advogado ou especialista em marcas antes de investir na identidade visual.
+3. Pesquisar o nome na base de marcas do INPI, para checar se já existe registro em classes parecidas (software e serviços online). O nome contém Ahri, que é um campeão de League of Legends (propriedade intelectual da Riot Games). Consulte a Riot pelo portal de desenvolvedores sobre o uso do nome e confirme com um advogado ou especialista em marcas antes de investir na identidade visual.
 4. Pesquisar se já existe site ou ferramenta de LoL com o mesmo nome, para evitar confusão.
 
 ### 22.2 Situação das tarefas do épico 0
@@ -1033,22 +1072,22 @@ Esta seção orienta ferramentas de IA (editores com assistente, agentes de cód
 | Tarefa | Situação | Quem faz |
 | --- | --- | --- |
 | T-001 | A fazer | Desenvolvedor (login com a conta Riot) |
-| T-002 | A fazer | Desenvolvedor roda o script teste\_riot.py; o assistente ajuda com erros |
+| T-002 | A fazer | Desenvolvedor roda o script scripts/teste-riot.mjs (Node.js); o assistente ajuda com erros |
 | T-003 | **Concluída** (seção 20) | Assistente |
-| T-004 | Nome e slogan definidos; faltam domínio, redes sociais e consulta de marca | Desenvolvedor |
-| T-005 | ◐ Em andamento (repositório, documentação inicial, `.gitignore` e `.env.example` criados; falta criar o quadro de tarefas) | Assistente / Desenvolvedor |
-| T-006 | **Concluída** (stack Python/FastAPI + Next.js/TypeScript + PostgreSQL registrada) | Assistente |
-| T-007 | **Rascunho pronto** (seção 22.3) | Assistente escreveu; desenvolvedor revisa |
+| T-004 | ◐ Em andamento (nome e slogan definidos; os domínios pretendidos foram informados como livres; faltam registrar o domínio, reservar as redes sociais e consultar a Riot e o INPI sobre o nome) | Desenvolvedor |
+| T-005 | ◐ Em andamento (repositório e documentação inicial criados; falta criar o quadro de tarefas e concluir os padrões de código) | Desenvolvedor, com o assistente de IA do editor |
+| T-006 | **Concluída** (stack registrada na seção 21: TypeScript no site e na API; Python só para machine learning) | Desenvolvedor |
+| T-007 | **Concluída** (rascunho pronto na seção 22.3; revisão final antes do envio) | Assistente escreveu; desenvolvedor revisa |
 
 ### 22.3 Rascunho da descrição para o pedido da chave de produção (T-007)
 
 O formulário da Riot é em inglês, por isso o texto abaixo está em inglês. Antes de enviar, substituir os campos entre colchetes e revisar o texto para refletir exatamente o que o produto faz **no momento do envio**.
 
-> **Product name:** Veyron
+> **Product name:** Ahriademia
 >
-> **Tagline:** Evolua além do seu elo (Evolve beyond your rank)
+> **Tagline:** Sua academia para evoluir no Rift. (Your academy to improve on the Rift)
 >
-> **Description:** Veyron is a free web platform for Brazilian League of Legends players who want to understand their mistakes and improve. Players search for their own Riot ID and see their match history, statistics by champion and role, and a post-game analysis that compares each match with aggregated benchmarks from players of the same rank and champion. The platform explains the results in clear Portuguese (what went well and what can be improved) and suggests small weekly goals so players can track their progress over time. A public tier list shows aggregated champion statistics (win rate, pick rate and ban rate) by role, patch and rank.
+> **Description:** Ahriademia is a free web platform for Brazilian League of Legends players who want to understand their mistakes and improve. Players search for their own Riot ID and see their match history, statistics by champion and role, and a post-game analysis that compares each match with aggregated benchmarks from players of the same rank and champion. The platform explains the results in clear Portuguese (what went well and what can be improved) and suggests small weekly goals so players can track their progress over time. A public tier list shows aggregated champion statistics (win rate, pick rate and ban rate) by role, patch and rank.
 >
 > **Target audience:** Casual and competitive League of Legends players in Brazil (BR1).
 >
@@ -1078,13 +1117,21 @@ O formulário da Riot é em inglês, por isso o texto abaixo está em inglês. A
 4. Texto acima revisado e sem nenhuma funcionalidade que ainda não esteja no protótipo.
 5. Recursos de risco (partida ao vivo, rankings próprios, marketplace de coaches) deixados de fora do primeiro pedido, conforme a seção 20.6.
 
-### 22.4 Estado atual do projeto (substitui o texto da seção 21.10)
+### 22.4 Estado atual do projeto
 
-Projeto: **Veyron**. Tarefas T-001 e T-002 continuam pendentes pelo desenvolvedor; T-003 e o rascunho da T-007 estão concluídos; T-004 permanece parcialmente concluída (nome e slogan definidos; faltam domínio, redes sociais e consulta de marca); T-005 está em andamento, com a fundação documental e as convenções do repositório criadas, mas ainda falta criar o quadro de tarefas; T-006 está concluída com a stack registrada. Próximas tarefas técnicas: T-014 e T-015, após a criação do quadro. A validação definitiva da identidade da T-004 continua necessária antes da divulgação pública e da landing.
+Projeto: **Ahriademia**. As tarefas T-001 e T-002 continuam pendentes pelo desenvolvedor; T-003, T-006 e T-007 estão concluídas. A T-004 está em andamento (nome e slogan definidos; os domínios pretendidos foram informados como livres; faltam registrar o domínio, reservar as redes sociais e consultar a Riot e o INPI sobre o nome). A T-005 está em andamento: repositório e documentação inicial criados; falta criar o quadro de tarefas e concluir os padrões de código. Próximas tarefas técnicas: T-014 e T-015. A validação definitiva da identidade (T-004) continua necessária antes da divulgação pública e da landing.
 
 ### 22.5 Histórico de revisões (continuação)
 
 | Versão | Data | Descrição |
 | --- | --- | --- |
-| 0.5 | 18/10/2026 | Nome e slogan do projeto, rascunho do pedido da chave de produção e situação das tarefas do épico 0 (seção 22) |
-| 0.6 | 20/10/2026 | Fundação do repositório e stack registrada; T-005 permanece pendente quanto ao quadro de tarefas |
+| 0.5 | 18/10/2026 | Nome e slogan do projeto, rascunho do pedido de chave de produção e situação das tarefas do épico 0 (seção 22) |
+
+### 22.6 Histórico de revisões (continuação)
+
+| Versão | Data | Descrição |
+| --- | --- | --- |
+| 0.7 | 21/10/2026 | Mudança do nome do projeto para Ahriademia e do slogan para Sua academia para evoluir no Rift.; atualização dos pendentes da T-004 e do pacote de arquivos (ahriademia-base.zip) |
+| 0.8 | 21/10/2026 | Situação atualizada com o trabalho feito no repositório: T-005 em andamento (quadro de tarefas pendente) e T-006 concluída |
+| 0.9 | 21/10/2026 | Alinhamento dos status do backlog principal com a situação do épico 0 e correção da versão do documento |
+| 1.0 | 12/11/2026 | Definição da arquitetura de monólito modular com worker separado, fluxos assíncronos, limites entre módulos e estrutura-alvo do repositório; alinhamento do README e das convenções |
