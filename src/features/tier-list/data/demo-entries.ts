@@ -1,0 +1,21 @@
+import type { ChampionEntry } from "../domain/champion-entry";
+
+export const demoEntries: ChampionEntry[] = [
+  { championId: "Aatrox", name: "Aatrox", englishName: "Aatrox", role: "TOP", tier: "S+", score: 97.4, winRate: 53.1, winRateChange: 0.8, pickRate: 12.8, banRate: 18.4, kda: 2.42, games: 18420, roleRate: 96.3, tierChange: "UP", difficulty: 4 },
+  { championId: "Garen", name: "Garen", englishName: "Garen", role: "TOP", tier: "S", score: 91.8, winRate: 52.6, winRateChange: 0.3, pickRate: 10.4, banRate: 8.7, kda: 2.31, games: 23110, roleRate: 98.1, tierChange: "SAME", difficulty: 5 },
+  { championId: "Camille", name: "Camille", englishName: "Camille", role: "TOP", tier: "A", score: 84.2, winRate: 50.8, winRateChange: -0.2, pickRate: 7.1, banRate: 5.2, kda: 2.58, games: 830, roleRate: 95.4, tierChange: "UP", lowSample: true, difficulty: 4 },
+  { championId: "RekSai", name: "Rek'Sai", englishName: "Rek'Sai", role: "JUNGLE", tier: "S+", score: 96.1, winRate: 52.9, winRateChange: 0.5, pickRate: 8.2, banRate: 10.6, kda: 3.12, games: 14870, roleRate: 97.8, tierChange: "UP", difficulty: 3 },
+  { championId: "Amumu", name: "Amumu", englishName: "Amumu", role: "JUNGLE", tier: "S", score: 90.5, winRate: 52.2, winRateChange: 0.1, pickRate: 11.6, banRate: 6.8, kda: 3.47, games: 20880, roleRate: 91.6, tierChange: "SAME", difficulty: 3 },
+  { championId: "LeeSin", name: "Lee Sin", englishName: "Lee Sin", role: "JUNGLE", tier: "B", score: 72.6, winRate: 48.9, winRateChange: -0.4, pickRate: 16.2, banRate: 12.3, kda: 2.91, games: 28910, roleRate: 88.4, tierChange: "DOWN", difficulty: 6 },
+  { championId: "Ahri", name: "Ahri", englishName: "Ahri", role: "MID", tier: "S+", score: 98.2, winRate: 53.4, winRateChange: 0.6, pickRate: 14.1, banRate: 9.5, kda: 3.18, games: 26410, roleRate: 99.1, tierChange: "UP", difficulty: 5 },
+  { championId: "Orianna", name: "Orianna", englishName: "Orianna", role: "MID", tier: "A", score: 85.7, winRate: 51.2, winRateChange: 0.2, pickRate: 8.8, banRate: 3.1, kda: 3.02, games: 15330, roleRate: 98.7, tierChange: "SAME", difficulty: 7 },
+  { championId: "Swain", name: "Swain", englishName: "Swain", role: "MID", tier: "A", score: 81.2, winRate: 50.9, winRateChange: -0.1, pickRate: 5.4, banRate: 2.3, kda: 3.05, games: 9420, roleRate: 46.35, tierChange: "SAME", difficulty: 8 },
+  { championId: "Yasuo", name: "Yasuo", englishName: "Yasuo", role: "MID", tier: "B", score: 74.3, winRate: 49.1, winRateChange: -0.3, pickRate: 15.4, banRate: 17.8, kda: 2.24, games: 28760, roleRate: 92.4, tierChange: "DOWN", difficulty: 10 },
+  { championId: "Jinx", name: "Jinx", englishName: "Jinx", role: "ADC", tier: "S+", score: 95.6, winRate: 53.0, winRateChange: 0.7, pickRate: 16.8, banRate: 14.2, kda: 3.21, games: 30210, roleRate: 99.5, tierChange: "UP", difficulty: 6 },
+  { championId: "MissFortune", name: "Miss Fortune", englishName: "Miss Fortune", role: "ADC", tier: "S", score: 90.8, winRate: 52.4, winRateChange: 0.3, pickRate: 13.2, banRate: 7.6, kda: 3.08, games: 24150, roleRate: 97.9, tierChange: "SAME", difficulty: 1 },
+  { championId: "Kaisa", name: "Kai'Sa", englishName: "Kai'Sa", role: "ADC", tier: "A", score: 83.1, winRate: 50.7, winRateChange: -0.2, pickRate: 18.1, banRate: 11.5, kda: 2.76, games: 32400, roleRate: 94.2, tierChange: "DOWN", difficulty: 6 },
+  { championId: "Nami", name: "Nami", englishName: "Nami", role: "SUPPORT", tier: "S+", score: 94.7, winRate: 52.8, winRateChange: 0.4, pickRate: 12.2, banRate: 5.1, kda: 3.76, games: 20980, roleRate: 96.4, tierChange: "UP", difficulty: 5 },
+  { championId: "Lulu", name: "Lulu", englishName: "Lulu", role: "SUPPORT", tier: "S", score: 89.2, winRate: 52.1, winRateChange: 0.1, pickRate: 10.5, banRate: 6.3, kda: 3.52, games: 17620, roleRate: 92.8, tierChange: "SAME", difficulty: 5 },
+  { championId: "Swain", name: "Swain", englishName: "Swain", role: "SUPPORT", tier: "S", score: 88.4, winRate: 51.8, winRateChange: 0.5, pickRate: 7.2, banRate: 2.7, kda: 3.67, games: 10980, roleRate: 53.65, tierChange: "UP", difficulty: 8 },
+  { championId: "Thresh", name: "Thresh", englishName: "Thresh", role: "SUPPORT", tier: "A", score: 82.4, winRate: 50.6, winRateChange: -0.1, pickRate: 11.8, banRate: 8.2, kda: 3.12, games: 19440, roleRate: 98.2, tierChange: "DOWN", difficulty: 7 },
+];

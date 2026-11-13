@@ -1,6 +1,6 @@
 # Documento de Requisitos de Software (DRS)
 
-**Projeto:** Ahriademia — Plataforma de Análise de League of Legends **Versão:** 1.1 **Data:** 12/11/2026 **Status:** Fundação técnica em andamento (T-014)
+**Projeto:** Ahriademia — Plataforma de Análise de League of Legends **Versão:** 1.5 **Data:** 13/11/2026 **Status:** Protótipo da tier list em implementação
 
 ---
 
@@ -606,23 +606,23 @@ A chave de produção pode demorar. Um produto público não pode rodar com a ch
 | T-006 | Decidir a stack (backend, banco e hospedagem) e registrar a decisão | T-003 | P | Stack documentada | ☑ |
 | T-007 | Rascunhar a descrição do produto para o pedido da chave de produção (usar as seções 1, 2 e 12) | T-003, T-004 | P | Texto pronto para o formulário | ☑ |
 
-### 19.4 Épico 1: Design no Figma
+### 19.4 Épico 1: Design orientado por descrição e protótipo em código
 
 | # | Tarefa | Depende | Esf. | Pronto quando | Status |
 | --- | --- | --- | --- | --- | --- |
-| T-008 | Reunir referências visuais (apenas inspiração) e definir o tom da marca | T-004 | P | Moodboard pronto | ☐ |
-| T-009 | Identidade visual: logo, paleta (tema claro e escuro) e tipografia | T-008 | M | Guia visual aprovado | ☐ |
-| T-010 | Design system: botões, cards, tabelas, selos de tier, ícones e estados de erro e carregamento | T-009 | M | Biblioteca de componentes no Figma | ☐ |
-| T-011 | Wireframes de tier list, busca, perfil, detalhe da partida e análise | T-008 | M | Fluxos desenhados | ☐ |
-| T-012 | Telas finais (desktop e celular) das fases 1 e 2 | T-010, T-011 | G | Telas prontas para programar | ☐ |
-| T-013 | Protótipo clicável e teste com 5 jogadores (casuais e competitivos) | T-012 | M | Ajustes anotados e aplicados | ☐ |
+| T-008 | Definir por descrição escrita o tom visual e as referências de marca, sem copiar interfaces de terceiros | T-004 | P | Direção visual registrada neste documento | ☑ |
+| T-009 | Definir identidade visual: marca própria, paleta, cores semânticas e tipografia | T-008 | M | Paleta e regras visuais aprovadas pelo desenvolvedor | ☑ |
+| T-010 | Implementar no código os tokens e componentes visuais reutilizáveis (cards, filtros, tiers, tabela, ícones e estados) | T-009 | M | Componentes responsivos e acessíveis implementados | ◐ |
+| T-011 | Especificar por texto os fluxos de tier list, busca, perfil, partida e análise | T-008 | M | Comportamentos e estados de cada tela descritos | ◐ |
+| T-012 | Implementar protótipo responsivo das telas das fases 1 e 2 diretamente no site | T-010, T-011 | G | Telas navegáveis em desktop e celular | ◐ |
+| T-013 | Revisar o protótipo no navegador e testar com 5 jogadores (casuais e competitivos) | T-012 | M | Ajustes anotados e aplicados | ☐ |
 
 ### 19.5 Épico 2: Fundação técnica
 
 | # | Tarefa | Depende | Esf. | Pronto quando | Status |
 | --- | --- | --- | --- | --- | --- |
-| T-014 | Configurar a fundação do backend, PostgreSQL, Prisma, pg-boss, worker Node.js e ambiente local (Docker) | T-006 | M | Banco, aplicação e worker iniciam localmente | ◐ |
-| T-015 | Configurar o frontend (Next.js), layout base, tema claro e escuro e textos em português | T-006, T-010 | M | Esqueleto do site rodando | ☐ |
+| T-014 | Configurar a fundação do backend, PostgreSQL, Prisma, pg-boss, worker Node.js e ambiente local (Docker) | T-006 | M | Banco, aplicação e worker iniciam localmente | ☑ |
+| T-015 | Configurar o frontend (Next.js), layout base, tema visual escolhido e textos em português | T-006, T-010 | M | Aplicação e layout visual rodam localmente | ◐ |
 | T-016 | Cliente da API da Riot no worker, com controle de taxa, novas tentativas e registro de erros | T-002, T-014 | M | Chamadas do worker respeitam os limites e registram falhas | ☐ |
 | T-017 | Importar dados estáticos do Data Dragon (campeões, itens, runas, imagens) e atualizar a cada patch | T-014 | M | Dados do patch atual no banco | ☐ |
 | T-018 | Ambiente de teste (staging) protegido por senha, publicação automática e testes automáticos (CI) | T-014, T-015 | M | Cada alteração publica no teste | ☐ |
@@ -864,7 +864,7 @@ A ordem abaixo é intencional: **moderação primeiro, recursos sociais depois.*
 
 ### 20.7 Ajuste no backlog
 
-- **T-031 pode ser antecipado.** Como mockups são aceitos, o pedido da chave de produção pode ser enviado assim que o protótipo do Figma (T-013) e a landing (T-020) estiverem prontos, mostrando os fluxos de busca, perfil, análise e login. Não é preciso esperar a tier list funcionar.
+- **T-031 pode ser antecipado.** Como protótipos testáveis são aceitos, o pedido da chave de produção pode ser enviado assim que o protótipo web (T-013) e a landing (T-020) estiverem prontos, mostrando os fluxos de busca, perfil, análise e login. Não é preciso esperar a tier list funcionar.
 - Antes de iniciar a fase 4B (partida ao vivo) e a fase 6 (comunidade), abrir uma conversa com a Riot pelo portal para confirmar os pontos de risco da tabela acima.
 
 ### 20.8 Histórico de revisões (continuação)
@@ -902,7 +902,7 @@ O worker também processa agregações e análises. Para análise pós-jogo, cal
 
 | Camada | Ferramenta | Como é usada | Fase |
 | --- | --- | --- | --- |
-| Design | Figma | Telas, design system e protótipo (também usado no pedido da chave à Riot) | 0 |
+| Design | Descrição escrita + protótipo web | Direção visual, especificações e testes de telas sem depender do Figma | 0 |
 | Linguagem | TypeScript (Node.js LTS) | Site, API, worker e chamadas ao modelo de linguagem | 1 |
 | Site e API | Next.js (React) | Páginas, rotas de API e SEO, em um único projeto | 1 |
 | Estilo | Tailwind CSS + shadcn/ui | Visual responsivo, temas claro e escuro, componentes prontos | 1 |
@@ -1109,21 +1109,21 @@ O formulário da Riot é em inglês, por isso o texto abaixo está em inglês. A
 >
 > **Privacy:** privacy policy and terms of use are available at \[link\]. Players can request the deletion of their data.
 >
-> **Links:** landing page \[link da landing\]; prototype \[link do Figma, com acesso liberado para visualização\]; the prototype shows account creation, login, player search, profile, tier list and post-game analysis.
+> **Links:** landing page \[link da landing\]; testable web prototype \[link do ambiente de teste\]; the prototype shows account creation, login, player search, profile, tier list and post-game analysis.
 >
 > **Contact:** \[e-mail do projeto\].
 
 **Checklist antes de enviar:**
 
 1. Landing publicada com política de privacidade, termos e aviso da Riot (T-020).
-2. Link do Figma com acesso de visualização liberado e com os fluxos de criar conta, login, busca, perfil, tier list e análise.
+2. Protótipo web acessível no ambiente de teste, com os fluxos de criar conta, login, busca, perfil, tier list e análise que já estiverem implementados.
 3. E-mail de contato do projeto criado.
 4. Texto acima revisado e sem nenhuma funcionalidade que ainda não esteja no protótipo.
 5. Recursos de risco (partida ao vivo, rankings próprios, marketplace de coaches) deixados de fora do primeiro pedido, conforme a seção 20.6.
 
 ### 22.4 Estado atual do projeto
 
-Projeto: **Ahriademia**. As tarefas T-001 e T-002 continuam pendentes pelo desenvolvedor; T-003, T-006 e T-007 estão concluídas. A T-004 está em andamento (nome e slogan definidos; os domínios pretendidos foram informados como livres; faltam registrar o domínio, reservar as redes sociais e consultar a Riot e o INPI sobre o nome). A T-005 está em andamento: repositório e documentação inicial criados; falta criar o quadro de tarefas e concluir os padrões de código. A T-014 está em andamento: esqueleto da aplicação, acesso ao PostgreSQL, worker, fila e Docker Compose preparados; falta validar a inicialização integrada com o Docker ativo. Depois vêm T-015 e as demais tarefas, respeitando dependências. A validação definitiva da identidade (T-004) continua necessária antes da divulgação pública e da landing.
+Projeto: **Ahriademia**. As tarefas T-001 e T-002 continuam pendentes pelo desenvolvedor; T-003, T-006, T-007 e T-014 estão concluídas. A T-004 está em andamento (nome e slogan definidos; os domínios pretendidos foram informados como livres; faltam registrar o domínio, reservar as redes sociais e consultar a Riot e o INPI sobre o nome). A T-005 está em andamento: repositório e documentação inicial criados; falta criar o quadro de tarefas e concluir os padrões de código. A T-014 foi validada localmente: PostgreSQL saudável no Docker, endpoint de saúde respondendo com banco conectado e worker conectado ao PostgreSQL. As tarefas de design não dependem mais do Figma: a identidade e a direção visual foram descritas pelo desenvolvedor, e T-010, T-011, T-012 e T-015 estão em andamento com a primeira tela da tier list. Os dados dessa tela são demonstrativos e ainda não vêm da API. A T-013 (teste com jogadores) e a implementação de dados reais permanecem pendentes. A validação definitiva da identidade (T-004) continua necessária antes da divulgação pública e da landing.
 
 ### 22.5 Histórico de revisões (continuação)
 
@@ -1140,3 +1140,74 @@ Projeto: **Ahriademia**. As tarefas T-001 e T-002 continuam pendentes pelo desen
 | 0.9 | 21/10/2026 | Alinhamento dos status do backlog principal com a situação do épico 0 e correção da versão do documento |
 | 1.0 | 12/11/2026 | Definição da arquitetura de monólito modular com worker separado, fluxos assíncronos, limites entre módulos e estrutura-alvo do repositório; alinhamento do README e das convenções |
 | 1.1 | 12/11/2026 | Início da T-014: esqueleto web/API, Prisma, worker pg-boss, PostgreSQL local com Docker Compose e instruções de execução |
+| 1.2 | 13/11/2026 | T-014 validada localmente com PostgreSQL saudável, endpoint de saúde e worker conectados; atualização da situação do projeto e das próximas dependências de design |
+| 1.3 | 13/11/2026 | Substituição do Figma por especificações escritas e protótipo web; registro da direção visual da tier list e início das tarefas T-010, T-011, T-012 e T-015 |
+| 1.4 | 13/11/2026 | Filtros de rota em abas com ícones e painel lateral de detalhes por hover/foco |
+| 1.5 | 13/11/2026 | Painel compacto de estatísticas inspirado na referência enviada; removida navegação ao perfil, não desejada nesta etapa |
+
+---
+
+## 23. Direção visual e especificação da primeira tela
+
+Esta seção registra a descrição dada pelo desenvolvedor para a primeira tela. O processo de design usa texto, implementação local e revisão no navegador; Figma não é requisito. Referências servem apenas para inspiração: não copiar layouts, ícones, cores ou textos de outros produtos.
+
+### 23.1 Identidade visual da tier list
+
+| Uso | Cor |
+| --- | --- |
+| Fundo | `#0A0A0C` |
+| Superfícies | `#131316`, `#1B1B20` |
+| Borda | `#2A2A31` |
+| Marca | `#E11D48`; hover `#FF3B5C`; brilho escuro `#7F1020` |
+| Texto principal / secundário / apagado | `#F4F4F6` / `#B3B3BD` / `#8A8A96` |
+
+Tipografia: títulos condensados e fortes (exemplo: Barlow Condensed) e texto de interface em estilo Inter. Cards têm um canto diagonal recortado e textura de fundo discreta. A faixa S+ recebe brilho vermelho suave. A cor não é o único identificador: cada função tem um ícone próprio criado para o projeto.
+
+| Função | Cor semântica | Tier | Cor |
+| --- | --- | --- | --- |
+| Topo | `#A78BFA` | S+ | Vermelho vivo com brilho |
+| Selva | `#34D399` | S | `#FF6B57` |
+| Meio | `#4F8CFF` | A | `#F5B14A` |
+| ADC | `#FACC15` | B | `#B4B8C5` |
+| Suporte | `#22D3EE` | C | `#7B8294` |
+|  |  | D | `#565B6B` |
+
+### 23.2 Conteúdo e interação
+
+- Cabeçalho próprio com marca, navegação, busca de Riot ID e entrada de conta. Funcionalidades ainda não implementadas devem aparecer claramente como indisponíveis ou “em breve”.
+- Cabeçalho da página com “Tier List”, patch, região, faixa de elo e quantidade de partidas analisadas; três destaques do patch (maior subida, mais banido, maior win rate).
+- Barra de filtros persistente durante a rolagem; tiers apresentados em faixas de S+ a D, com quantidade e descrição simples. Tiers sem resultados são compactos e informam que não há campeões.
+- Cards de campeão em orientação vertical, aproximadamente 120 × 180 px em desktop e 96 × 144 px em celular. Usar `championId` do Data Dragon e arte oficial de carregamento em `https://ddragon.leagueoflegends.com/cdn/img/champion/loading/{championId}_0.jpg`, com recorte no topo. Borda de 3 px na cor da função; rodapé escuro com nome e pontuação.
+- Um campeão com mais de uma função tem um card por função. Ao destacar um card, os outros cards do mesmo campeão ficam realçados e os demais perdem destaque.
+- Apresentar as rotas como botões horizontais com ícone e nome, no estilo da referência visual enviada; destacar a rota selecionada e permitir voltar à visão geral.
+- No mouse e no foco do teclado, mostrar um painel compacto ao lado do card após breve atraso; posicionar à esquerda quando faltar espaço à direita, manter aberto ao mover o ponteiro para o painel e fechar com Escape. O card serve para revelar informações, sem navegar para outra página.
+- O painel apresenta retrato, nome, rota e as métricas Tier, Score, Win %, Pick %, KDA, Games, Role % e Ban %. Reutiliza os dados carregados, sem nova chamada.
+- Oferecer visualização por tiers ou tabela ordenável, comparação com patch anterior, busca por nome em português ou inglês sem diferenciar acentos/maiúsculas, ordenação e tamanhos de card. A busca realça correspondências sem remover outros cards; Enter foca o primeiro resultado.
+- Filtros selecionados são compartilháveis na URL (`funcao`, `elo`, `patch`, `regiao`). Região BR começa ativa; regiões ainda indisponíveis permanecem desabilitadas com “em breve”. Oferecer contagem de resultados, limpar filtros e estados vazios amigáveis.
+- Não induzir conclusão com amostra insuficiente: exibir aviso de amostra baixa e não apresentar números enganosos. Respeitar navegação por teclado e preferência por movimento reduzido.
+- Rodapé inclui o slogan do projeto e o aviso obrigatório de não endosso pela Riot, conforme seção 20.
+
+### 23.3 Dados e limite do protótipo
+
+O front-end recebe a função e o tier já calculados; não calcula tiers. Cada entrada segue o contrato:
+
+```ts
+type ChampionEntry = {
+  championId: string;
+  name: string;
+  role: "TOP" | "JUNGLE" | "MID" | "ADC" | "SUPPORT";
+  tier: "S+" | "S" | "A" | "B" | "C" | "D";
+  score: number;
+  winRate: number;
+  pickRate: number;
+  banRate: number;
+  kda: number;
+  games: number;
+  roleRate: number;
+  tierChange?: "UP" | "DOWN" | "SAME";
+  lowSample?: boolean;
+  difficulty?: number;
+};
+```
+
+Enquanto o endpoint da tier list não existir, os valores usados no site são apenas demonstrativos e devem permanecer identificados como tais. Retratos e dados estáticos de campeões devem vir do Data Dragon; estatísticas do produto deverão vir do backend e ser agregadas conforme as políticas da Riot.
