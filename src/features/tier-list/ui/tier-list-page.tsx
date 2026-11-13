@@ -11,7 +11,6 @@ import {
   type MouseEvent,
   type CSSProperties,
 } from "react";
-import { demoEntries } from "../data/demo-entries";
 import {
   roleLabels,
   tierLabels,
@@ -35,7 +34,19 @@ type InitialFilters = {
   sort: SortMode;
 };
 
-const patchOptions = ["26.22", "26.21"];
+type TierListResponse = {
+  data: ChampionEntry[];
+  meta: {
+    patch: string | null;
+    availablePatches?: string[];
+    matchesInDatabase?: number;
+    minimumGames?: number;
+    preliminary?: boolean;
+    message?: string;
+  };
+};
+
+type DataStatus = "loading" | "ready" | "error";
 
 const eloOptions = [
   ["all", "Todos os elos"],
@@ -107,9 +118,7 @@ function readInitialFilters(): InitialFilters | null {
 
   return {
     role: selectedRole ?? "all",
-    patch: patchOptions.some((option) => option === patch)
-      ? patch!
-      : "26.22",
+    patch: patch && /^\d{1,3}\.\d{1,3}$/.test(patch) ? patch : "",
     elo: eloOptions.some((option) => option[0] === elo) ? elo! : "all",
     region: region === "br" ? "br" : "br",
     search: params.get("busca") ?? "",
@@ -475,7 +484,7 @@ function ChampionDetail({
 
 export default function TierListPage() {
   const [role, setRole] = useState<"all" | ChampionRole>("all");
-  const [patch, setPatch] = useState("26.22");
+  const [patch, setPatch] = useState("");
   const [elo, setElo] = useState("all");
   const [region, setRegion] = useState<"br">("br");
   const [search, setSearch] = useState("");
@@ -486,6 +495,10 @@ export default function TierListPage() {
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [collapsedTiers, setCollapsedTiers] = useState<Set<ChampionTier>>(new Set());
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [entries, setEntries] = useState<ChampionEntry[]>([]);
+  const [dataStatus, setDataStatus] = useState<DataStatus>("loading");
+  const [dataMeta, setDataMeta] = useState<TierListResponse["meta"] | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [hoverUnavailable, setHoverUnavailable] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -500,6 +513,12 @@ export default function TierListPage() {
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeSide = useRef<"left" | "right">("right");
+
+  const patchOptions = useMemo(() => {
+    const options = [...(dataMeta?.availablePatches ?? [])];
+    if (patch && !options.includes(patch)) options.unshift(patch);
+    return options;
+  }, [dataMeta?.availablePatches, patch]);
 
   const normalizedSearch = normalizeText(search.trim());
 
@@ -535,6 +554,47 @@ export default function TierListPage() {
   }, []);
 
   useEffect(() => {
+    if (!mounted) return;
+
+    const controller = new AbortController();
+    const params = new URLSearchParams({
+      regiao: region,
+      elo,
+      funcao: role === "all" ? "all" : role.toLowerCase(),
+    });
+    if (patch) params.set("patch", patch);
+    if (process.env.NODE_ENV !== "production") {
+      params.set("amostra", "preliminar");
+    }
+
+    setDataStatus("loading");
+    fetch(`/api/v1/tier-list?${params.toString()}`, {
+      signal: controller.signal,
+      cache: "no-store",
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`Tier-list API returned HTTP ${response.status}.`);
+        }
+        return (await response.json()) as TierListResponse;
+      })
+      .then((result) => {
+        setEntries(result.data);
+        setDataMeta(result.meta);
+        setDataStatus("ready");
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        console.error("Could not load tier-list data.", error);
+        setEntries([]);
+        setDataMeta(null);
+        setDataStatus("error");
+      });
+
+    return () => controller.abort();
+  }, [elo, mounted, patch, region, reloadKey, role]);
+
+  useEffect(() => {
     if (!mounted) {
       return;
     }
@@ -542,7 +602,7 @@ export default function TierListPage() {
     const params = new URLSearchParams();
     if (role !== "all") params.set("funcao", role.toLowerCase());
     if (elo !== "all") params.set("elo", elo);
-    if (patch !== "26.22") params.set("patch", patch);
+    if (patch) params.set("patch", patch);
     if (region !== "br") params.set("regiao", region);
     if (search.trim()) params.set("busca", search.trim());
     if (compare) params.set("comparar", "true");
@@ -578,14 +638,14 @@ export default function TierListPage() {
   }, [activeKey]);
 
   const filteredEntries = useMemo(() => {
-    return demoEntries
+    return entries
       .filter((entry) => role === "all" || entry.role === role)
       .filter((entry) => !favoritesOnly || favorites.has(entry.championId))
       .sort((a, b) => {
         if (sort === "name") return a.name.localeCompare(b.name, "pt-BR");
         return b[sort] - a[sort];
       });
-  }, [favorites, favoritesOnly, role, sort]);
+  }, [entries, favorites, favoritesOnly, role, sort]);
 
   const matchingEntries = useMemo(
     () =>
@@ -600,11 +660,9 @@ export default function TierListPage() {
     [matchingEntries],
   );
 
-  const shownGames = 128_430;
+  const shownGames = dataMeta?.matchesInDatabase ?? 0;
   const highestWinRate = [...filteredEntries].sort((a, b) => b.winRate - a.winRate)[0];
   const mostBanned = [...filteredEntries].sort((a, b) => b.banRate - a.banRate)[0];
-  const biggestClimber = filteredEntries.find((entry) => entry.tierChange === "UP");
-
   const setActiveFromCard = useCallback((entry: ChampionEntry, card: HTMLDivElement) => {
     const bounds = card.getBoundingClientRect();
     activeSide.current =
@@ -680,7 +738,7 @@ export default function TierListPage() {
 
   const clearFilters = () => {
     setRole("all");
-    setPatch("26.22");
+    setPatch("");
     setElo("all");
     setRegion("br");
     setSearch("");
@@ -694,7 +752,7 @@ export default function TierListPage() {
   };
 
   const activeEntry = activeKey
-    ? demoEntries.find((entry) => `${entry.championId}-${entry.role}` === activeKey)
+    ? entries.find((entry) => `${entry.championId}-${entry.role}` === activeKey)
     : undefined;
   return (
     <main className="tier-page">
@@ -733,7 +791,7 @@ export default function TierListPage() {
       <div className="page-shell" id="tier-list">
         <section className="hero-section">
           <div className="hero-copy">
-            <p className="eyebrow hero-eyebrow"><span className="live-dot" /> PATCH {patch} · RANQUEADAS</p>
+            <p className="eyebrow hero-eyebrow"><span className="live-dot" /> PATCH {dataMeta?.patch ?? "—"} · RANQUEADAS</p>
             <h1>Tier <span>List</span></h1>
             <p className="hero-description">
               Encontre sua próxima escolha. Estatísticas claras para decisões melhores no Rift.
@@ -743,6 +801,7 @@ export default function TierListPage() {
             <div className="context-chip">
               <span>PATCH</span>
               <select ref={patchSelectRef} value={patch} onChange={(event) => setPatch(event.target.value)} aria-label="Patch">
+                <option value="">Mais recente</option>
                 {patchOptions.map((option) => <option key={option} value={option}>{option}</option>)}
               </select>
               <SelectChevron label="Abrir opções de patch" onOpen={() => openNativeSelect(patchSelectRef.current)} />
@@ -767,17 +826,32 @@ export default function TierListPage() {
           </div>
         </section>
 
-        <section className="demo-notice" aria-label="Aviso sobre os dados">
+        <section className={`demo-notice ${dataStatus === "error" ? "demo-notice-error" : ""}`} aria-label="Aviso sobre os dados">
           <span className="demo-notice-icon">i</span>
-          <p><strong>Prévia interativa.</strong> Estatísticas ilustrativas para demonstrar a interface; os dados reais serão conectados à API do projeto.</p>
-          <span className="demo-patch-label">BR · {patch}</span>
+          <p>
+            {dataStatus === "loading" ? (
+              <><strong>Carregando dados.</strong> Consultando a amostra coletada da Riot.</>
+            ) : dataStatus === "error" ? (
+              <><strong>Não foi possível carregar os dados.</strong> A API da tier list está indisponível. Tente novamente em instantes.</>
+            ) : dataMeta?.preliminary ? (
+              <><strong>Prévia preliminar — não é uma tier list confiável.</strong> Dados reais coletados da Riot, mas ainda abaixo do mínimo de {dataMeta.minimumGames ?? 50} partidas por campeão/função. Os tiers e scores são provisórios.</>
+            ) : (
+              <><strong>Dados oficiais da amostra processada.</strong> A classificação só inclui campeões que atingiram o mínimo de partidas e diversidade.</>
+            )}
+          </p>
+          {dataStatus === "error" ? (
+            <button type="button" className="notice-retry" onClick={() => setReloadKey((key) => key + 1)}>
+              Tentar novamente
+            </button>
+          ) : null}
+          <span className="demo-patch-label">BR · {dataMeta?.patch ?? "—"}</span>
         </section>
 
-        <section className="patch-highlights" aria-label="Destaques demonstrativos do patch">
+        <section className="patch-highlights" aria-label="Destaques do patch">
           <article className="highlight-card">
             <span className="highlight-icon highlight-climb"><Icon name="arrow" size={16} /></span>
-            <div className="highlight-copy"><span>QUEM MAIS SUBIU</span><strong>{biggestClimber?.name ?? "—"}</strong></div>
-            <span className="highlight-metric">↑ {biggestClimber?.tier ?? "—"}</span>
+            <div className="highlight-copy"><span>MAIOR PONTUAÇÃO</span><strong>{filteredEntries[0]?.name ?? "—"}</strong></div>
+            <span className="highlight-metric">{filteredEntries[0]?.score.toFixed(1).replace(".", ",") ?? "—"}</span>
           </article>
           <article className="highlight-card">
             <span className="highlight-icon highlight-ban">⌑</span>
@@ -869,7 +943,13 @@ export default function TierListPage() {
 
         {view === "tiers" ? (
           <section className="tier-list" aria-label="Campeões organizados por tier">
-            {tierOrder.map((tier) => {
+            {dataStatus !== "ready" ? (
+              <div className="empty-state" role={dataStatus === "error" ? "alert" : "status"}>
+                <span className="empty-mark">{dataStatus === "loading" ? "…" : "!"}</span>
+                <h2>{dataStatus === "loading" ? "Carregando amostra" : "Dados indisponíveis"}</h2>
+                <p>{dataStatus === "loading" ? "Buscando os dados reais coletados para estes filtros." : "A API não conseguiu responder. Você pode tentar novamente pelo aviso acima."}</p>
+              </div>
+            ) : tierOrder.map((tier) => {
               const tierEntries = filteredEntries.filter((entry) => entry.tier === tier);
               const collapsed = collapsedTiers.has(tier);
               return (
@@ -934,16 +1014,16 @@ export default function TierListPage() {
                 </section>
               );
             })}
-            {filteredEntries.length === 0 ? (
+            {dataStatus === "ready" && filteredEntries.length === 0 ? (
               <div className="empty-state">
                 <span className="empty-mark">?</span>
-                <h2>{favoritesOnly ? "Você ainda não favoritou campeões" : "Nenhum campeão encontrado"}</h2>
-                <p>{favoritesOnly ? "Toque na estrela de um card para guardar seus favoritos neste navegador." : "Tente mudar os filtros ou limpar a busca para ver mais resultados."}</p>
+                <h2>{favoritesOnly ? "Você ainda não favoritou campeões" : entries.length === 0 ? "A amostra ainda não tem campeões classificáveis" : "Nenhum campeão encontrado"}</h2>
+                <p>{favoritesOnly ? "Toque na estrela de um card para guardar seus favoritos neste navegador." : entries.length === 0 ? "A coleta precisa reunir dados suficientes e ao menos cinco campeões por função para exibir uma prévia." : "Tente mudar os filtros ou limpar a busca para ver mais resultados."}</p>
                 <button type="button" className="button-primary" onClick={clearFilters}>Limpar filtros</button>
               </div>
             ) : null}
           </section>
-        ) : (
+        ) : dataStatus !== "ready" ? null : (
           <section className="table-section" aria-label="Tier list em tabela">
             {filteredEntries.length ? (
               <div className="table-scroll">

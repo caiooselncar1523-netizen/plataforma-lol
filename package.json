@@ -15,7 +15,10 @@
     "typecheck": "tsc --noEmit",
     "db:generate": "prisma generate",
     "db:validate": "prisma validate",
-    "db:migrate": "prisma migrate dev"
+    "db:migrate": "prisma migrate dev",
+    "tierlist:collect": "tsx scripts/collect-tier-list.ts",
+    "tierlist:aggregate": "tsx scripts/recompute-tier-list.ts",
+    "test": "node --import tsx --test"
   },
   "dependencies": {
     "@prisma/client": "^6.19.0",

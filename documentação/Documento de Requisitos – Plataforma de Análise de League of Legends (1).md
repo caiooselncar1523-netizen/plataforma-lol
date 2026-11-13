@@ -1,6 +1,6 @@
 # Documento de Requisitos de Software (DRS)
 
-**Projeto:** Ahriademia — Plataforma de Análise de League of Legends **Versão:** 1.5 **Data:** 13/11/2026 **Status:** Protótipo da tier list em implementação
+**Projeto:** Ahriademia — Plataforma de Análise de League of Legends **Versão:** 1.6 **Data:** 13/11/2026 **Status:** Pipeline de dados da tier list em implementação
 
 ---
 
@@ -633,14 +633,14 @@ A chave de produção pode demorar. Um produto público não pode rodar com a ch
 
 | # | Tarefa | Depende | Esf. | Pronto quando | Status |
 | --- | --- | --- | --- | --- | --- |
-| T-021 | Modelar o banco: partidas, participantes, estatísticas e benchmarks | T-014 | M | Tabelas criadas | ☐ |
-| T-022 | Coletor de jogadores por faixa de elo (servidor BR) | T-016, T-021 | M | Lista de jogadores salva | ☐ |
-| T-023 | Coletor de IDs e detalhes das partidas, com fila e sem duplicatas | T-022 | G | Partidas entrando no banco | ☐ |
-| T-024 | Guardar cada partida junto com o patch correspondente | T-023 | P | Campo de patch preenchido | ☐ |
-| T-025 | Job de agregação: win rate, pick rate, ban rate, KDA e jogos por campeão, função, patch e elo | T-024 | G | Tabela de estatísticas gerada | ☐ |
-| T-026 | Fórmula de pontuação e tiers (S+ a D), com testes unitários e conferência manual de uma amostra | T-025 | M | Tiers coerentes com os dados | ☐ |
-| T-027 | API da tier list com filtros (função, patch, elo) e cache | T-026 | M | Endpoint respondendo rápido | ☐ |
-| T-028 | Tela da tier list: lista, tabela ordenável, filtros e variação em relação ao patch anterior | T-012, T-027 | G | Tela igual ao design | ☐ |
+| T-021 | Modelar o banco: partidas, participantes, estatísticas e benchmarks | T-014 | M | Tabelas criadas | ☑ |
+| T-022 | Coletor de jogadores por faixa de elo (servidor BR) | T-016, T-021 | M | Lista de jogadores salva | ☑ |
+| T-023 | Coletor de IDs e detalhes das partidas, com fila e sem duplicatas | T-022 | G | Partidas entrando no banco | ☑ |
+| T-024 | Guardar cada partida junto com o patch correspondente | T-023 | P | Campo de patch preenchido | ☑ |
+| T-025 | Job de agregação: win rate, pick rate, ban rate, KDA e jogos por campeão, função, patch e elo | T-024 | G | Tabela de estatísticas gerada | ◐ |
+| T-026 | Fórmula de pontuação e tiers (S+ a D), com testes unitários e conferência manual de uma amostra | T-025 | M | Tiers coerentes com os dados | ◐ |
+| T-027 | API da tier list com filtros (função, patch, elo) e cache | T-026 | M | Endpoint respondendo rápido | ◐ |
+| T-028 | Tela da tier list: lista, tabela ordenável, filtros e variação em relação ao patch anterior | T-012, T-027 | G | Tela igual ao design | ◐ |
 | T-029 | Estados de carregamento, vazio e erro; ajuste para celular | T-028 | M | Sem rolagem horizontal no celular | ☐ |
 | T-030 | Testes de aceite da fase 1 (CT-04 e conferência dos dados) | T-029 | M | Testes aprovados | ☐ |
 | T-031 | **Registrar o produto na Riot e pedir a chave de produção** (com descrição, landing, protótipo e tier list no ambiente de teste) | T-007, T-020, T-030 | M | Pedido enviado | ☐ |
@@ -1003,6 +1003,10 @@ Todas ficam em um arquivo `.env` (fora do Git). O repositório contém apenas o 
 | --- | --- |
 | APP\_ENV | development, staging ou production |
 | RIOT\_API\_KEY | Chave da API da Riot (nunca no código) |
+| RIOT\_REQUEST\_INTERVAL\_MS | Intervalo mínimo entre chamadas à Riot; padrão local de 1200 ms |
+| RIOT\_COLLECTION\_MAX\_PLAYERS | Limite de jogadores amostrados por coleta; padrão local de 8 |
+| RIOT\_COLLECTION\_MATCHES\_PER\_PLAYER | Partidas ranqueadas recentes por jogador; padrão local de 3 |
+| RIOT\_MIN\_CHAMPION\_GAMES | Amostra mínima por campeão/função para aparecer no ranking; padrão de 50, revisar antes de publicar |
 | POSTGRES\_USER, POSTGRES\_PASSWORD, POSTGRES\_DB | Dados do PostgreSQL local (Docker) |
 | DATABASE\_URL | Conexão com o PostgreSQL |
 | ANTHROPIC\_API\_KEY | Chave da API do Claude para os textos de análise |
@@ -1123,7 +1127,7 @@ O formulário da Riot é em inglês, por isso o texto abaixo está em inglês. A
 
 ### 22.4 Estado atual do projeto
 
-Projeto: **Ahriademia**. As tarefas T-001 e T-002 continuam pendentes pelo desenvolvedor; T-003, T-006, T-007 e T-014 estão concluídas. A T-004 está em andamento (nome e slogan definidos; os domínios pretendidos foram informados como livres; faltam registrar o domínio, reservar as redes sociais e consultar a Riot e o INPI sobre o nome). A T-005 está em andamento: repositório e documentação inicial criados; falta criar o quadro de tarefas e concluir os padrões de código. A T-014 foi validada localmente: PostgreSQL saudável no Docker, endpoint de saúde respondendo com banco conectado e worker conectado ao PostgreSQL. As tarefas de design não dependem mais do Figma: a identidade e a direção visual foram descritas pelo desenvolvedor, e T-010, T-011, T-012 e T-015 estão em andamento com a primeira tela da tier list. Os dados dessa tela são demonstrativos e ainda não vêm da API. A T-013 (teste com jogadores) e a implementação de dados reais permanecem pendentes. A validação definitiva da identidade (T-004) continua necessária antes da divulgação pública e da landing.
+Projeto: **Ahriademia**. As tarefas T-001 e T-002 continuam pendentes pelo desenvolvedor; T-003, T-006, T-007, T-014, T-021 a T-024 estão concluídas. A T-004 está em andamento (nome e slogan definidos; os domínios pretendidos foram informados como livres; faltam registrar o domínio, reservar as redes sociais e consultar a Riot e o INPI sobre o nome). A T-005 está em andamento: repositório e documentação inicial criados; falta criar o quadro de tarefas e concluir os padrões de código. A T-014 foi validada localmente: PostgreSQL saudável no Docker, endpoint de saúde respondendo com banco conectado e worker conectado ao PostgreSQL. As tarefas de design não dependem mais do Figma: a identidade e a direção visual foram descritas pelo desenvolvedor, e T-010, T-011, T-012 e T-015 estão em andamento com a primeira tela da tier list. T-022 e T-023 já coletam e persistem jogadores amostrados e partidas; T-025, T-026 e T-027 seguem em andamento. Foram consultados 8 jogadores e persistidas 27 partidas ranqueadas do BR, com patch, participantes e amostras de elo. No patch 16.22 há 9 partidas e a agregação preliminar identifica 69 combinações campeão/função; nenhuma atingiu o mínimo local de 50 jogos para publicação oficial. A fórmula relativa está implementada e coberta por testes, mas a conferência competitiva com uma amostra real suficiente continua pendente. A tela agora consulta a API e pode mostrar essa prévia apenas em desenvolvimento, com aviso explícito de que scores e tiers não são confiáveis; T-028 segue em andamento e a visualização precisa ser validada após reiniciar o servidor de desenvolvimento. A T-013 (teste com jogadores) permanece pendente. A validação definitiva da identidade (T-004) continua necessária antes da divulgação pública e da landing.
 
 ### 22.5 Histórico de revisões (continuação)
 
@@ -1144,6 +1148,8 @@ Projeto: **Ahriademia**. As tarefas T-001 e T-002 continuam pendentes pelo desen
 | 1.3 | 13/11/2026 | Substituição do Figma por especificações escritas e protótipo web; registro da direção visual da tier list e início das tarefas T-010, T-011, T-012 e T-015 |
 | 1.4 | 13/11/2026 | Filtros de rota em abas com ícones e painel lateral de detalhes por hover/foco |
 | 1.5 | 13/11/2026 | Painel compacto de estatísticas inspirado na referência enviada; removida navegação ao perfil, não desejada nesta etapa |
+| 1.6 | 13/11/2026 | Modelagem e migração de dados da tier list, coleta limitada via Riot, agregação testada, fórmula inicial de tier e endpoint filtrado/cacheado; status T-021 a T-027 atualizado |
+| 1.7 | 13/11/2026 | Integração da tela com a API e prévia local sinalizada para amostras ainda abaixo do mínimo oficial |
 
 ---
 
@@ -1210,4 +1216,26 @@ type ChampionEntry = {
 };
 ```
 
-Enquanto o endpoint da tier list não existir, os valores usados no site são apenas demonstrativos e devem permanecer identificados como tais. Retratos e dados estáticos de campeões devem vir do Data Dragon; estatísticas do produto deverão vir do backend e ser agregadas conforme as políticas da Riot.
+A tela consome a API do produto. Em desenvolvimento, `amostra=preliminar` permite visualizar a agregação das partidas persistidas abaixo do mínimo oficial; a resposta não tem cache e sinaliza cada entrada com `lowSample`. Essa prévia é apenas diagnóstica: tiers e scores não são confiáveis. Em produção, a API continua exibindo apenas estatísticas que atingiram o mínimo de partidas e diversidade. Retratos e nomes de campeões vêm do Data Dragon; estatísticas vêm da API do produto e são agregadas no servidor/worker, nunca no navegador.
+
+#### Fórmula inicial de pontuação (T-026)
+
+Para cada combinação patch, elo e função, os campeões elegíveis são comparados por percentil (ranking médio para empates) em cada métrica. Só há tier quando a coorte tem ao menos 5 campeões elegíveis; isso evita atribuir uma classificação relativa sem diversidade suficiente.
+
+- Percentil do win rate: 50% do score.
+- Percentil do pick rate: 20%.
+- Percentil do ban rate: 20%.
+- Percentil do KDA: 10%.
+- Confiança amostral: aproxima o score de 50 enquanto a amostra é pequena, com `confiança = jogos / (jogos + 100)`. O score final é `50 + (scorePercentilPonderado - 50) × confiança`, arredondado a duas casas.
+
+Faixas iniciais: S+ ≥ 90; S ≥ 80; A ≥ 65; B ≥ 50; C ≥ 35; D < 35. Só entram no ranking combinações com pelo menos 50 jogos (ajustável por ambiente). Os pesos, faixas, prior de 100 jogos e mínimo de 50 são hipóteses iniciais explícitas e testadas, não uma calibração competitiva. Antes da publicação, comparar com uma amostra maior e revisar com métricas históricas; não reduzir o mínimo apenas para preencher a tela.
+
+Pick rate usa as partidas da amostra em que o campeão/função apareceu divididas pelo total de partidas da amostra; ban rate usa partidas da amostra em que o campeão foi banido; Role % é a fração das partidas do campeão atribuída à função; KDA é a média por partida de `(abates + assistências) / max(mortes, 1)`.
+
+#### Coleta e endpoint
+
+- `npm run tierlist:collect` faz uma coleta manual limitada. O worker agenda a mesma coleta a cada 12 horas.
+- A coleta BR consulta listas de jogadores por faixa de elo, limita o número de jogadores e partidas por variáveis de ambiente, respeita intervalo e `Retry-After`, deduplica partidas/participantes e reprocessa o histórico persistido do patch afetado.
+- A faixa de elo atribuída a uma partida é a do jogador amostrado que forneceu seu histórico; como Match-V5 não informa o elo histórico dos outros nove participantes, esse filtro é uma aproximação e deve ser comunicado como tal.
+- `npm run tierlist:aggregate` reprocessa as partidas já salvas sem novas chamadas à Riot.
+- `GET /api/v1/tier-list?regiao=br&patch=16.22&elo=all&funcao=all` consulta estatísticas oficiais persistidas. Os filtros aceitos são BR, patches numéricos, elos e funções definidos na tela; respostas têm cache de cinco minutos. Em desenvolvimento, acrescentar `amostra=preliminar` calcula uma prévia a partir das partidas persistidas, sem cache e sem alterar o mínimo oficial; essa opção é desabilitada em produção.

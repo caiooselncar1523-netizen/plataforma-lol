@@ -6,3 +6,124 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+enum GameRole {
+  TOP
+  JUNGLE
+  MID
+  ADC
+  SUPPORT
+}
+
+enum EloBucket {
+  ALL
+  IRON
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+  EMERALD
+  DIAMOND
+  MASTER_PLUS
+}
+
+model MatchRecord {
+  matchId         String             @id
+  platform        String             @default("BR1")
+  queueId         Int
+  gameVersion     String
+  patch           String
+  startedAt       DateTime
+  durationSeconds Int
+  ingestedAt      DateTime           @default(now())
+  participants    MatchParticipant[]
+  bans            MatchBan[]
+  samples         MatchSample[]
+
+  @@index([platform, queueId, patch])
+  @@index([startedAt])
+}
+
+model MatchSample {
+  matchId   String
+  eloBucket EloBucket
+  sampledAt DateTime    @default(now())
+  match     MatchRecord @relation(fields: [matchId], references: [matchId], onDelete: Cascade)
+
+  @@id([matchId, eloBucket])
+  @@index([eloBucket, sampledAt])
+}
+
+model RankedPlayerSample {
+  puuid         String    @id
+  platform      String    @default("BR1")
+  eloBucket     EloBucket
+  firstSeenAt   DateTime  @default(now())
+  lastSampledAt DateTime  @default(now())
+
+  @@index([platform, eloBucket, lastSampledAt])
+}
+
+model MatchParticipant {
+  matchId     String
+  puuid       String
+  championId  Int
+  championKey String
+  role        GameRole
+  won         Boolean
+  kills       Int
+  deaths      Int
+  assists     Int
+  match       MatchRecord @relation(fields: [matchId], references: [matchId], onDelete: Cascade)
+
+  @@id([matchId, puuid])
+  @@index([championId, role])
+}
+
+model MatchBan {
+  matchId    String
+  teamId     Int
+  championId Int
+  match      MatchRecord @relation(fields: [matchId], references: [matchId], onDelete: Cascade)
+
+  @@id([matchId, teamId, championId])
+  @@index([championId])
+}
+
+model ChampionStat {
+  platform    String
+  patch       String
+  eloBucket   EloBucket
+  championId  Int
+  championKey String
+  role        GameRole
+  tier        String
+  score       Float
+  winRate     Float
+  pickRate    Float
+  banRate     Float
+  kda         Float
+  games       Int
+  roleRate    Float
+  computedAt  DateTime  @default(now())
+
+  @@id([platform, patch, eloBucket, championId, role])
+  @@index([platform, patch, eloBucket, tier, score])
+}
+
+model ChampionBenchmark {
+  platform    String
+  patch       String
+  eloBucket   EloBucket
+  championId  Int
+  championKey String
+  role        GameRole
+  metric      String
+  average     Float
+  stddev      Float
+  games       Int
+  computedAt  DateTime  @default(now())
+
+  @@id([platform, patch, eloBucket, championId, role, metric])
+  @@index([platform, patch, eloBucket, championId, role])
+}

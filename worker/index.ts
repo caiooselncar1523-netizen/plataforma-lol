@@ -1,5 +1,8 @@
 import "dotenv/config";
 import { PgBoss } from "pg-boss";
+import { collectTierList } from "../src/features/tier-list/application/collect-tier-list";
+
+const tierListCollectionQueue = "tier-list.collect";
 
 async function main(): Promise<void> {
   const connectionString = process.env.DATABASE_URL;
@@ -16,6 +19,14 @@ async function main(): Promise<void> {
 
   await boss.start();
   console.info("Ahriademia worker started and connected to PostgreSQL.");
+
+  await boss.createQueue(tierListCollectionQueue);
+  await boss.work(tierListCollectionQueue, async () => {
+    const result = await collectTierList();
+    console.info("Scheduled tier-list collection completed.", result);
+  });
+  await boss.schedule(tierListCollectionQueue, "0 */12 * * *");
+  console.info("Tier-list collection scheduled every 12 hours.");
 
   let stopping = false;
   const shutdown = async (signal: NodeJS.Signals): Promise<void> => {

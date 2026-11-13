@@ -473,6 +473,31 @@ select option {
   color: #ffe0a2;
 }
 
+.demo-notice-error {
+  border-color: rgb(255 104 104 / 35%);
+  background: linear-gradient(90deg, rgb(255 104 104 / 8%), rgb(255 104 104 / 2%));
+  color: #efb4b4;
+}
+
+.demo-notice-error .demo-notice-icon {
+  border-color: rgb(255 104 104 / 75%);
+}
+
+.demo-notice-error strong {
+  color: #ffc0c0;
+}
+
+.notice-retry {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border: 1px solid rgb(255 104 104 / 42%);
+  background: rgb(255 104 104 / 8%);
+  color: #ffc0c0;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 700;
+}
+
 .demo-patch-label {
   color: #d7bd88;
   font-size: 9px;
