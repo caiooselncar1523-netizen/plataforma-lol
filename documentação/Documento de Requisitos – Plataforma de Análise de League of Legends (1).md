@@ -1160,6 +1160,7 @@ Projeto: **Ahriademia**. T-001, T-002, T-003, T-005, T-006, T-007, T-014, T-015 
 | 2.5 | 14/11/2026 | Erro HTTP 401/403 da Riot orienta a validar a chave carregada pelo servidor sem expor credenciais |
 | 2.6 | 14/11/2026 | Prazo de expiração de 24 horas da chave de desenvolvimento registrado nas restrições |
 | 2.7 | 16/11/2026 | T-034 concluída: coleta account-v1, summoner-v4 e league-v4, persistência de perfil e filas ranqueadas com migração e testes |
+| 2.8 | 17/11/2026 | Workflow do GitHub definido como agendador único; cron executa às 00:17, 10:17 e 20:17 UTC e o worker não agenda coletas paralelas |
 
 ---
 
@@ -1244,7 +1245,7 @@ Pick rate usa as partidas da amostra em que o campeão/função apareceu dividid
 
 #### Coleta e endpoint
 
-- `npm run tierlist:collect` faz uma coleta manual limitada. O worker agenda a mesma coleta a cada 12 horas.
+- `npm run tierlist:collect` faz uma coleta manual limitada. O workflow `.github/workflows/coleta-tierlist.yml` é o agendador automático principal e executa às 00:17, 10:17 e 20:17 UTC (07:17, 17:17 e 21:17 em Brasília). Por ser um cron de calendário do GitHub Actions, os intervalos reais alternam entre 10, 10 e 4 horas; não é possível representar um intervalo contínuo exato de 10 horas nesse agendador. O worker consome jobs da fila, mas não agenda coletas recorrentes para evitar duplicidade.
 - A coleta BR consulta listas de jogadores por faixa de elo, limita o número de jogadores e partidas por variáveis de ambiente, respeita intervalo e `Retry-After`, deduplica partidas/participantes e reprocessa o histórico persistido do patch afetado.
 - A faixa de elo atribuída a uma partida é a do jogador amostrado que forneceu seu histórico; como Match-V5 não informa o elo histórico dos outros nove participantes, esse filtro é uma aproximação e deve ser comunicado como tal.
 - Os filtros “Ferro+” até “Diamante+” são cumulativos: a agregação do worker combina as amostras de jogadores daquela faixa e das faixas superiores, deduplicando cada partida. “Mestre+” corresponde à amostra Master/Grandmaster/Challenger. A faixa continua sendo uma aproximação baseada no jogador amostrado, não no elo histórico de todos os participantes.

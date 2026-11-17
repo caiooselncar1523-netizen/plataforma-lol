@@ -1,0 +1,60 @@
+# Coleta automática da tier list do Ahriademia.
+#
+# Onde salvar no repositório:  .github/workflows/coleta-tierlist.yml
+#
+# Segredos (Settings > Secrets and variables > Actions > Secrets):
+#   RIOT_API_KEY   chave da API da Riot
+#   DATABASE_URL   string de conexão do PostgreSQL hospedado (Neon)
+#
+# Variáveis opcionais (mesma tela, aba Variables). Se não existirem, valem os padrões abaixo:
+#   RIOT_COLLECTION_MAX_PLAYERS, RIOT_COLLECTION_MATCHES_PER_PLAYER,
+#   RIOT_REQUEST_INTERVAL_MS, RIOT_MIN_CHAMPION_GAMES
+
+name: Coleta da tier list
+
+on:
+  schedule:
+    # 00:17, 10:17 e 20:17 UTC. O cron do GitHub é baseado em calendário:
+    # os intervalos se repetem como 10h, 10h e 4h (07:17, 17:17 e 21:17 em Brasília).
+    - cron: "17 0,10,20 * * *"
+  workflow_dispatch: # permite rodar manualmente pela aba Actions
+
+# Nunca rodar duas coletas ao mesmo tempo (evita estourar o limite da Riot)
+concurrency:
+  group: tierlist-coleta
+  cancel-in-progress: false
+
+jobs:
+  coletar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45 # corta execuções travadas para não gastar minutos grátis
+    env:
+      APP_ENV: production
+      RIOT_API_KEY: ${{ secrets.RIOT_API_KEY }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      RIOT_REQUEST_INTERVAL_MS: ${{ vars.RIOT_REQUEST_INTERVAL_MS || '1200' }}
+      RIOT_COLLECTION_MAX_PLAYERS: ${{ vars.RIOT_COLLECTION_MAX_PLAYERS || '40' }}
+      RIOT_COLLECTION_MATCHES_PER_PLAYER: ${{ vars.RIOT_COLLECTION_MATCHES_PER_PLAYER || '10' }}
+      RIOT_MIN_CHAMPION_GAMES: ${{ vars.RIOT_MIN_CHAMPION_GAMES || '50' }}
+
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Instalar o Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Gerar o cliente do Prisma
+        run: npx prisma generate
+
+      - name: Coletar jogadores e partidas (Riot)
+        run: npm run tierlist:collect
+
+      - name: Agregar estatísticas e tiers
+        run: npm run tierlist:aggregate

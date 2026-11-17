@@ -25,8 +25,7 @@ async function main(): Promise<void> {
     const result = await collectTierList();
     console.info("Scheduled tier-list collection completed.", result);
   });
-  await boss.schedule(tierListCollectionQueue, "0 */12 * * *");
-  console.info("Tier-list collection scheduled every 12 hours.");
+  console.info("Worker is listening for tier-list collection jobs.");
 
   let stopping = false;
   const shutdown = async (signal: NodeJS.Signals): Promise<void> => {
