@@ -58,11 +58,13 @@ export function aggregateChampionStats(
     throw new RangeError("minimumGames must be a positive integer.");
   }
 
-  const matches = [
-    ...new Map(
-      inputMatches.map((match) => [`${match.matchId}:${match.eloBucket}`, match]),
-    ).values(),
-  ];
+  const uniqueMatches = new Map<string, AggregationMatch>();
+  for (const match of inputMatches) {
+    if (!uniqueMatches.has(match.matchId)) {
+      uniqueMatches.set(match.matchId, match);
+    }
+  }
+  const matches = [...uniqueMatches.values()];
   const groups = new Map<string, ChampionAccumulator>();
   const championGames = new Map<number, number>();
   const bannedMatches = new Map<number, Set<string>>();

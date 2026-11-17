@@ -19,6 +19,7 @@ import {
   type ChampionRole,
   type ChampionTier,
 } from "../domain/champion-entry";
+import { SiteFooter, SiteHeader } from "@/features/shared/ui/site-chrome";
 
 type ViewMode = "tiers" | "table";
 type SortMode = "score" | "winRate" | "pickRate" | "banRate" | "name";
@@ -173,17 +174,6 @@ function RoleIcon({ role }: { role: ChampionRole }) {
       <path d="M12 3 20 6v6c0 5-3 8-8 10-5-2-8-5-8-10V6l8-3Z" />
       <path d="M12 8v8m-4-4h8" />
     </svg>
-  );
-}
-
-function BrandMark() {
-  return (
-    <span className="brand-mark" aria-hidden="true">
-      <svg viewBox="0 0 34 34">
-        <path d="M17 3 30 10.5v13L17 31 4 23.5v-13L17 3Z" />
-        <path d="m10 22 7-14 7 14m-11-5h8" />
-      </svg>
-    </span>
   );
 }
 
@@ -501,7 +491,6 @@ export default function TierListPage() {
   const [reloadKey, setReloadKey] = useState(0);
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [hoverUnavailable, setHoverUnavailable] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [imageFailures, setImageFailures] = useState<Set<string>>(new Set());
   const [mounted, setMounted] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -661,6 +650,7 @@ export default function TierListPage() {
   );
 
   const shownGames = dataMeta?.matchesInDatabase ?? 0;
+  const highestScore = [...filteredEntries].sort((a, b) => b.score - a.score)[0];
   const highestWinRate = [...filteredEntries].sort((a, b) => b.winRate - a.winRate)[0];
   const mostBanned = [...filteredEntries].sort((a, b) => b.banRate - a.banRate)[0];
   const setActiveFromCard = useCallback((entry: ChampionEntry, card: HTMLDivElement) => {
@@ -756,37 +746,7 @@ export default function TierListPage() {
     : undefined;
   return (
     <main className="tier-page">
-      <header className="site-header">
-        <a className="brand" href="/" aria-label="Ahriademia, início">
-          <BrandMark />
-          <span className="brand-word">AHRI<span>A</span>DEMIA</span>
-        </a>
-        <nav className="main-nav" aria-label="Navegação principal">
-          <a className="nav-link nav-link-active" href="#tier-list">Tier List</a>
-          <a className="nav-link nav-link-disabled" href="#busca" aria-disabled="true">Jogadores <span>EM BREVE</span></a>
-          <a className="nav-link nav-link-disabled" href="#analises" aria-disabled="true">Análises <span>EM BREVE</span></a>
-        </nav>
-        <div className="header-actions">
-          <label className="header-search">
-            <Icon name="search" size={16} />
-            <input aria-label="Buscar Riot ID" placeholder="Buscar Riot ID" disabled />
-            <span>EM BREVE</span>
-          </label>
-          <button type="button" className="sign-in-button" disabled title="Login estará disponível em uma fase futura">
-            Entrar <Icon name="arrow" size={15} />
-          </button>
-          <button type="button" className="mobile-menu icon-button" aria-label="Abrir menu" aria-expanded={mobileMenuOpen} onClick={() => setMobileMenuOpen((open) => !open)}>
-            <Icon name="grid" />
-          </button>
-        </div>
-      </header>
-      {mobileMenuOpen ? (
-        <nav className="mobile-nav-panel" aria-label="Navegação mobile">
-          <a href="#tier-list" onClick={() => setMobileMenuOpen(false)}>Tier List <span>ATUAL</span></a>
-          <a href="#busca" aria-disabled="true">Jogadores <span>EM BREVE</span></a>
-          <a href="#analises" aria-disabled="true">Análises <span>EM BREVE</span></a>
-        </nav>
-      ) : null}
+      <SiteHeader active="tier-list" />
 
       <div className="page-shell" id="tier-list">
         <section className="hero-section">
@@ -835,6 +795,8 @@ export default function TierListPage() {
               <><strong>Não foi possível carregar os dados.</strong> A API da tier list está indisponível. Tente novamente em instantes.</>
             ) : dataMeta?.preliminary ? (
               <><strong>Prévia preliminar — não é uma tier list confiável.</strong> Dados reais coletados da Riot, mas ainda abaixo do mínimo de {dataMeta.minimumGames ?? 50} partidas por campeão/função. Os tiers e scores são provisórios.</>
+            ) : entries.length === 0 ? (
+              <><strong>Amostra oficial insuficiente.</strong> Ainda não há campeões com o mínimo de partidas necessário para publicar a classificação.</>
             ) : (
               <><strong>Dados oficiais da amostra processada.</strong> A classificação só inclui campeões que atingiram o mínimo de partidas e diversidade.</>
             )}
@@ -850,8 +812,8 @@ export default function TierListPage() {
         <section className="patch-highlights" aria-label="Destaques do patch">
           <article className="highlight-card">
             <span className="highlight-icon highlight-climb"><Icon name="arrow" size={16} /></span>
-            <div className="highlight-copy"><span>MAIOR PONTUAÇÃO</span><strong>{filteredEntries[0]?.name ?? "—"}</strong></div>
-            <span className="highlight-metric">{filteredEntries[0]?.score.toFixed(1).replace(".", ",") ?? "—"}</span>
+            <div className="highlight-copy"><span>MAIOR PONTUAÇÃO</span><strong>{highestScore?.name ?? "—"}</strong></div>
+            <span className="highlight-metric">{highestScore?.score.toFixed(1).replace(".", ",") ?? "—"}</span>
           </article>
           <article className="highlight-card">
             <span className="highlight-icon highlight-ban">⌑</span>
@@ -1023,9 +985,15 @@ export default function TierListPage() {
               </div>
             ) : null}
           </section>
-        ) : dataStatus !== "ready" ? null : (
+        ) : (
           <section className="table-section" aria-label="Tier list em tabela">
-            {filteredEntries.length ? (
+            {dataStatus !== "ready" ? (
+              <div className="empty-state" role={dataStatus === "error" ? "alert" : "status"}>
+                <span className="empty-mark">{dataStatus === "loading" ? "…" : "!"}</span>
+                <h2>{dataStatus === "loading" ? "Carregando amostra" : "Dados indisponíveis"}</h2>
+                <p>{dataStatus === "loading" ? "Buscando os dados reais coletados para estes filtros." : "A API não conseguiu responder. Tente novamente pelo aviso acima."}</p>
+              </div>
+            ) : filteredEntries.length ? (
               <div className="table-scroll">
                 <table className="champion-table">
                   <thead>
@@ -1069,21 +1037,15 @@ export default function TierListPage() {
             ) : (
               <div className="empty-state">
                 <span className="empty-mark">?</span>
-                <h2>Nenhum resultado para mostrar</h2>
-                <p>Adicione favoritos ou ajuste os filtros para preencher esta tabela.</p>
+                <h2>{favoritesOnly ? "Você ainda não favoritou campeões" : entries.length === 0 ? "A amostra ainda não tem campeões classificáveis" : "Nenhum resultado para mostrar"}</h2>
+                <p>{favoritesOnly ? "Toque na estrela de um card para guardar seus favoritos neste navegador." : entries.length === 0 ? "A coleta precisa reunir o mínimo de partidas por campeão e função para exibir uma classificação oficial." : "Ajuste os filtros para encontrar campeões nesta tabela."}</p>
                 <button type="button" className="button-primary" onClick={clearFilters}>Limpar filtros</button>
               </div>
             )}
           </section>
         )}
 
-        <footer className="site-footer">
-          <a className="footer-brand" href="/"><BrandMark /><span>AHRI<span>A</span>DEMIA</span></a>
-          <p>Sua academia para evoluir no Rift.</p>
-          <p className="riot-disclaimer">
-            Ahriademia não é endossado pela Riot Games e não reflete as opiniões de pessoas oficialmente envolvidas na produção ou no gerenciamento das propriedades da Riot Games. Riot Games e todas as propriedades associadas são marcas comerciais ou registradas da Riot Games, Inc.
-          </p>
-        </footer>
+        <SiteFooter />
       </div>
 
     </main>

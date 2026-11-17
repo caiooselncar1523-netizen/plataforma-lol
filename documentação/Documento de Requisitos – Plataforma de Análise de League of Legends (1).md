@@ -68,7 +68,7 @@ Os sites atuais mostram muitos números, mas pouco explicam **por que** o jogado
 
 ### 2.5 Restrições
 
-- A API da Riot impõe **limites de requisições**; a chave de desenvolvimento é temporária e limitada.
+- A API da Riot impõe **limites de requisições**; a chave de desenvolvimento é temporária, limitada e expira a cada 24 horas.
 - O uso dos dados deve seguir as políticas da Riot Games (aprovação do produto e aviso de que o site não é endossado pela Riot).
 - O orçamento inicial é pequeno, por isso a arquitetura deve começar enxuta.
 
@@ -412,7 +412,7 @@ Os testes acompanham cada fase. Quanto mais cedo um erro for achado, mais barato
 
 | ID | Cenário | Passos | Resultado esperado |
 | --- | --- | --- | --- |
-| CT-01 | Busca de jogador válido | Digitar um Riot ID existente na região BR | Perfil carregado com elo e estatísticas |
+| CT-01 | Busca de jogador válido | Digitar um Riot ID existente na região BR | Riot ID validado, perfil e filas ranqueadas salvos; a tela completa do perfil pertence à T-035 |
 | CT-02 | Busca de jogador inexistente | Digitar um Riot ID que não existe | Mensagem clara de jogador não encontrado |
 | CT-03 | Riot ID com formato inválido | Digitar nome sem a TAG | Mensagem pedindo o formato Nome#TAG |
 | CT-04 | Filtro da tier list | Selecionar função Meio e elo Diamante+ | Lista atualizada somente com campeões da função e do elo |
@@ -598,11 +598,11 @@ A chave de produção pode demorar. Um produto público não pode rodar com a ch
 
 | # | Tarefa | Depende | Esf. | Pronto quando | Status |
 | --- | --- | --- | --- | --- | --- |
-| T-001 | Entrar no portal de desenvolvedores da Riot e gerar a chave de desenvolvimento | — | P | Chave visível no painel | ☐ |
-| T-002 | Testar chamadas: Riot ID para PUUID, elo e últimas partidas, com um script simples | T-001 | P | Dados aparecem no terminal | ☐ |
+| T-001 | Entrar no portal de desenvolvedores da Riot e gerar a chave de desenvolvimento | — | P | Chave visível no painel | ☑ |
+| T-002 | Testar chamadas: Riot ID para PUUID, elo e últimas partidas, com um script simples | T-001 | P | Dados aparecem no terminal | ☑ |
 | T-003 | Ler a documentação e as políticas da Riot (uso de dados, aviso obrigatório, limites) e anotar as regras | — | P | Resumo das regras salvo | ☑ |
 | T-004 | Definir o nome do projeto, verificar domínio e redes sociais | — | M | Nome e domínio escolhidos | ◐ |
-| T-005 | Criar o repositório Git, o quadro de tarefas (copiar este backlog) e padrões de código | — | P | Repositório e quadro criados | ◐ |
+| T-005 | Criar o repositório Git, o quadro de tarefas (copiar este backlog) e padrões de código | — | P | Repositório e quadro criados | ☑ |
 | T-006 | Decidir a stack (backend, banco e hospedagem) e registrar a decisão | T-003 | P | Stack documentada | ☑ |
 | T-007 | Rascunhar a descrição do produto para o pedido da chave de produção (usar as seções 1, 2 e 12) | T-003, T-004 | P | Texto pronto para o formulário | ☑ |
 
@@ -622,9 +622,9 @@ A chave de produção pode demorar. Um produto público não pode rodar com a ch
 | # | Tarefa | Depende | Esf. | Pronto quando | Status |
 | --- | --- | --- | --- | --- | --- |
 | T-014 | Configurar a fundação do backend, PostgreSQL, Prisma, pg-boss, worker Node.js e ambiente local (Docker) | T-006 | M | Banco, aplicação e worker iniciam localmente | ☑ |
-| T-015 | Configurar o frontend (Next.js), layout base, tema visual escolhido e textos em português | T-006, T-010 | M | Aplicação e layout visual rodam localmente | ◐ |
-| T-016 | Cliente da API da Riot no worker, com controle de taxa, novas tentativas e registro de erros | T-002, T-014 | M | Chamadas do worker respeitam os limites e registram falhas | ☐ |
-| T-017 | Importar dados estáticos do Data Dragon (campeões, itens, runas, imagens) e atualizar a cada patch | T-014 | M | Dados do patch atual no banco | ☐ |
+| T-015 | Configurar o frontend (Next.js), layout base, tema visual escolhido e textos em português | T-006, T-010 | M | Aplicação e layout visual rodam localmente | ☑ |
+| T-016 | Cliente da API da Riot no worker, com controle de taxa, novas tentativas e registro de erros | T-002, T-014 | M | Chamadas do worker respeitam os limites e registram falhas | ◐ |
+| T-017 | Importar dados estáticos do Data Dragon (campeões, itens, runas, imagens) e atualizar a cada patch | T-014 | M | Dados do patch atual no banco | ◐ |
 | T-018 | Ambiente de teste (staging) protegido por senha, publicação automática e testes automáticos (CI) | T-014, T-015 | M | Cada alteração publica no teste | ☐ |
 | T-019 | Monitoramento de erros, logs e backup automático do banco | T-018 | P | Alertas e backups funcionando | ☐ |
 | T-020 | Landing 'em breve' com política de privacidade, termos de uso e aviso de que o site não é endossado pela Riot | T-009, T-015 | M | Página publicada no domínio | ☐ |
@@ -639,10 +639,10 @@ A chave de produção pode demorar. Um produto público não pode rodar com a ch
 | T-024 | Guardar cada partida junto com o patch correspondente | T-023 | P | Campo de patch preenchido | ☑ |
 | T-025 | Job de agregação: win rate, pick rate, ban rate, KDA e jogos por campeão, função, patch e elo | T-024 | G | Tabela de estatísticas gerada | ◐ |
 | T-026 | Fórmula de pontuação e tiers (S+ a D), com testes unitários e conferência manual de uma amostra | T-025 | M | Tiers coerentes com os dados | ◐ |
-| T-027 | API da tier list com filtros (função, patch, elo) e cache | T-026 | M | Endpoint respondendo rápido | ◐ |
+| T-027 | API da tier list com filtros (função, patch, elo) e cache | T-026 | M | Endpoint respondendo rápido | ☑ |
 | T-028 | Tela da tier list: lista, tabela ordenável, filtros e variação em relação ao patch anterior | T-012, T-027 | G | Tela igual ao design | ◐ |
-| T-029 | Estados de carregamento, vazio e erro; ajuste para celular | T-028 | M | Sem rolagem horizontal no celular | ☐ |
-| T-030 | Testes de aceite da fase 1 (CT-04 e conferência dos dados) | T-029 | M | Testes aprovados | ☐ |
+| T-029 | Estados de carregamento, vazio e erro; ajuste para celular | T-028 | M | Sem rolagem horizontal no celular | ☑ |
+| T-030 | Testes de aceite da fase 1 (CT-04 e conferência dos dados) | T-029 | M | Testes aprovados | ◐ |
 | T-031 | **Registrar o produto na Riot e pedir a chave de produção** (com descrição, landing, protótipo e tier list no ambiente de teste) | T-007, T-020, T-030 | M | Pedido enviado | ☐ |
 
 > **Marco 1: Fase 1 concluída (ambiente de teste).** Atenção: não abra a tier list ao público enquanto estiver usando a chave de desenvolvimento. Mantenha o ambiente protegido por senha até a chave de produção ser aprovada.
@@ -651,9 +651,9 @@ A chave de produção pode demorar. Um produto público não pode rodar com a ch
 
 | # | Tarefa | Depende | Esf. | Pronto quando | Status |
 | --- | --- | --- | --- | --- | --- |
-| T-032 | Busca por Riot ID: validação do formato, consulta do PUUID e mensagens de erro amigáveis | T-016 | M | CT-01, CT-02 e CT-03 passam | ☐ |
-| T-033 | Tela inicial com a busca e o seletor de região | T-012, T-032 | M | Busca funcionando na tela | ☐ |
-| T-034 | Coletar e guardar o perfil (nível, ícone, elo, LP, vitórias e derrotas) | T-032 | M | Dados do perfil no banco | ☐ |
+| T-032 | Busca por Riot ID: validação do formato, consulta do PUUID e mensagens de erro amigáveis | T-016 | M | CT-01, CT-02 e CT-03 passam | ☑ |
+| T-033 | Tela inicial com a busca e o seletor de região | T-012, T-032 | M | Busca funcionando na tela | ☑ |
+| T-034 | Coletar e guardar o perfil (nível, ícone, elo, LP, vitórias e derrotas) | T-032 | M | Dados do perfil no banco | ☑ |
 | T-035 | **Tela do perfil**: cabeçalho com elo, LP e win rate | T-034 | M | Perfil abre com dados reais | ☐ |
 | T-036 | **Histórico de partidas: coleta paginada** (próxima tarefa depois do perfil) | T-035 | M | Partidas do jogador no banco | ☐ |
 | T-037 | Lista de partidas (campeão, resultado, KDA, CS, duração) com filtros | T-036 | M | Lista com paginação | ☐ |
@@ -1079,11 +1079,11 @@ A situação atual do projeto está na seção 22.4.
 
 | Tarefa | Situação | Quem faz |
 | --- | --- | --- |
-| T-001 | A fazer | Desenvolvedor (login com a conta Riot) |
-| T-002 | A fazer | Desenvolvedor roda o script scripts/teste-riot.mjs (Node.js); o assistente ajuda com erros |
+| T-001 | **Concluída** (chave de desenvolvimento gerada no portal da Riot; manter segredo no ambiente local) | Desenvolvedor (login com a conta Riot) |
+| T-002 | **Concluída** (chamadas testadas: PUUID, elo e partidas recentes; respostas confirmadas no terminal) | Desenvolvedor roda o script scripts/teste-riot.mjs (Node.js); o assistente ajuda com erros |
 | T-003 | **Concluída** (seção 20) | Assistente |
-| T-004 | ◐ Em andamento (nome e slogan definidos; os domínios pretendidos foram informados como livres; faltam registrar o domínio, reservar as redes sociais e consultar a Riot e o INPI sobre o nome) | Desenvolvedor |
-| T-005 | ◐ Em andamento (repositório e documentação inicial criados; falta criar o quadro de tarefas e concluir os padrões de código) | Desenvolvedor, com o assistente de IA do editor |
+| T-004 | ◐ Em andamento (nome e slogan definidos; disponibilidade dos domínios pretendidos informada pelo desenvolvedor; domínio ainda não comprado) | Desenvolvedor |
+| T-005 | **Concluída** (repositório Git criado, backlog copiado para a seção 19 deste documento e padrões de contribuição registrados em `CONTRIBUTING.md`) | Desenvolvedor, com o assistente de IA do editor |
 | T-006 | **Concluída** (stack registrada na seção 21: TypeScript no site e na API; Python só para machine learning) | Desenvolvedor |
 | T-007 | **Concluída** (rascunho pronto na seção 22.3; revisão final antes do envio) | Assistente escreveu; desenvolvedor revisa |
 
@@ -1127,7 +1127,7 @@ O formulário da Riot é em inglês, por isso o texto abaixo está em inglês. A
 
 ### 22.4 Estado atual do projeto
 
-Projeto: **Ahriademia**. As tarefas T-001 e T-002 continuam pendentes pelo desenvolvedor; T-003, T-006, T-007, T-014, T-021 a T-024 estão concluídas. A T-004 está em andamento (nome e slogan definidos; os domínios pretendidos foram informados como livres; faltam registrar o domínio, reservar as redes sociais e consultar a Riot e o INPI sobre o nome). A T-005 está em andamento: repositório e documentação inicial criados; falta criar o quadro de tarefas e concluir os padrões de código. A T-014 foi validada localmente: PostgreSQL saudável no Docker, endpoint de saúde respondendo com banco conectado e worker conectado ao PostgreSQL. As tarefas de design não dependem mais do Figma: a identidade e a direção visual foram descritas pelo desenvolvedor, e T-010, T-011, T-012 e T-015 estão em andamento com a primeira tela da tier list. T-022 e T-023 já coletam e persistem jogadores amostrados e partidas; T-025, T-026 e T-027 seguem em andamento. Foram consultados 8 jogadores e persistidas 27 partidas ranqueadas do BR, com patch, participantes e amostras de elo. No patch 16.22 há 9 partidas e a agregação preliminar identifica 69 combinações campeão/função; nenhuma atingiu o mínimo local de 50 jogos para publicação oficial. A fórmula relativa está implementada e coberta por testes, mas a conferência competitiva com uma amostra real suficiente continua pendente. A tela agora consulta a API e pode mostrar essa prévia apenas em desenvolvimento, com aviso explícito de que scores e tiers não são confiáveis; T-028 segue em andamento e a visualização precisa ser validada após reiniciar o servidor de desenvolvimento. A T-013 (teste com jogadores) permanece pendente. A validação definitiva da identidade (T-004) continua necessária antes da divulgação pública e da landing.
+Projeto: **Ahriademia**. T-001, T-002, T-003, T-005, T-006, T-007, T-014, T-015 e T-021 a T-024 estão concluídas. A T-004 permanece em andamento: nome e slogan definidos e disponibilidade dos domínios pretendidos informada pelo desenvolvedor; o domínio ainda não foi comprado. A T-005 está concluída com o repositório Git, o backlog na seção 19 e as convenções em `CONTRIBUTING.md`. A T-014 foi validada localmente: PostgreSQL saudável no Docker, endpoint de saúde respondendo com banco conectado e worker conectado ao PostgreSQL. A T-015 foi concluída: o frontend Next.js, a identidade visual aplicada à tela da tier list e os textos em português estão implementados para execução local; isso não significa que todas as telas do protótipo (T-012) estejam prontas. T-016 está parcialmente implementada: o cliente Riot tem intervalo mínimo entre chamadas, novas tentativas para falhas de rede, 429 e 5xx, e erros tipados, mas falta validar o controle de taxa no worker e garantir o registro explícito das falhas. T-017 está parcialmente implementada: existe consulta ao Data Dragon para catálogo de campeões, mas os dados não são persistidos no banco e itens, runas, imagens e atualização automatizada por patch ainda faltam. T-018, T-019 e T-020 continuam pendentes: não há staging protegido/CI, monitoramento com alertas e backup automático, nem landing publicada com páginas legais e aviso da Riot. T-022 e T-023 já coletam e persistem jogadores amostrados e partidas; o job de agregação de T-025 e a fórmula de T-026 estão implementados e cobertos por testes, mas T-025 permanece parcial porque a execução com mínimo configurado de 50 partidas não gerou registros na tabela oficial: nenhum grupo campeão/função atingiu a amostra, então é necessário coletar mais partidas antes de satisfazer o critério “Tabela de estatísticas gerada”. O KDA segue a definição documentada de média por partida de `(abates + assistências) / max(mortes, 1)`. T-027 está concluída e foi validada com respostas oficiais e preliminares, filtros e cache; a API mantém a classificação oficial vazia quando não há dados que atinjam o mínimo. T-028 segue em andamento: a tela está integrada e foi testada no navegador com filtros de rota/elo, mas a comparação real entre patches ainda depende de estatísticas oficiais em patches consecutivos. T-029 está concluída: carregamento, vazio e erro verificados; a página não gera rolagem horizontal nem a 320 px, mantendo a tabela rolável dentro de seu contêiner. T-030 permanece em andamento, pois a conferência de classificação oficial depende de amostra suficiente. T-032 está concluída: a API valida o Riot ID, consulta o PUUID na Riot sem expô-lo ao navegador e trata formato inválido, conta não encontrada, região não habilitada e limitação de requisições com mensagens em português. T-033 está concluída: a home permite buscar na região BR, separar automaticamente um Riot ID colado em qualquer campo, reaproveitar buscas recentes e encaminhar a conta validada para a área do jogador; os estados de carregamento e erro são acessíveis. T-034 está concluída: a busca consulta account-v1, summoner-v4 e league-v4 no servidor e persiste Riot ID, nível, ícone e entradas ranqueadas (elo, divisão, LP, vitórias e derrotas) no PostgreSQL; perfis sem ranqueada são salvos com a lista de filas vazia. A tela detalhada continua na T-035. A migração de faixas cumulativas de elo e a migração de perfis foram aplicadas localmente. Foram consultados 8 jogadores e persistidas 27 partidas ranqueadas do BR; no patch 16.22 há 9 partidas e a prévia identifica 69 combinações campeão/função. Nenhuma combinação atingiu o mínimo local de 50 jogos para publicação oficial, portanto essa prévia continua explicitamente não confiável. T-031 depende de T-030, da landing/ambiente de teste de T-020 e do registro externo do produto na Riot; permanece pendente. A T-013 (teste com jogadores) permanece pendente. A compra do domínio continua sendo uma pendência da identidade (T-004), sem impedir as tarefas já concluídas deste épico.
 
 ### 22.5 Histórico de revisões (continuação)
 
@@ -1150,6 +1150,16 @@ Projeto: **Ahriademia**. As tarefas T-001 e T-002 continuam pendentes pelo desen
 | 1.5 | 13/11/2026 | Painel compacto de estatísticas inspirado na referência enviada; removida navegação ao perfil, não desejada nesta etapa |
 | 1.6 | 13/11/2026 | Modelagem e migração de dados da tier list, coleta limitada via Riot, agregação testada, fórmula inicial de tier e endpoint filtrado/cacheado; status T-021 a T-027 atualizado |
 | 1.7 | 13/11/2026 | Integração da tela com a API e prévia local sinalizada para amostras ainda abaixo do mínimo oficial |
+| 1.8 | 13/11/2026 | Faixas cumulativas de elo persistidas, filtros da API corrigidos, estados e responsividade da tela validados; status de T-027 e T-029 atualizado |
+| 1.9 | 13/11/2026 | T-001, T-002 e T-005 do épico 0 marcadas como concluídas; T-004 permanece em andamento até a compra do domínio |
+| 2.0 | 13/11/2026 | Revisão do épico 2: T-015 concluída, T-016 e T-017 parcialmente implementadas, T-018 a T-020 pendentes |
+| 2.1 | 13/11/2026 | Revisão de T-025: cálculo de KDA alinhado à definição documentada e coberto por teste; reprocessamento local de 11 patches gerou 0 estatísticas oficiais por amostra abaixo do mínimo, então a tarefa permanece parcial |
+| 2.2 | 13/11/2026 | Início de T-032: endpoint de busca por Riot ID com validação, consulta ao PUUID, erros em português e testes; CT-01 continua pendente do perfil com elo/estatísticas |
+| 2.3 | 14/11/2026 | T-033 marcada como parcial: home responsiva implementada, mas busca e seletor de região permanecem desabilitados até integração funcional com T-032 |
+| 2.4 | 14/11/2026 | Busca BR conectada à home, mensagens de erro e redirecionamento implementados; PUUID mantido no servidor e CT-01 delimitado ao escopo de T-032/T-033 |
+| 2.5 | 14/11/2026 | Erro HTTP 401/403 da Riot orienta a validar a chave carregada pelo servidor sem expor credenciais |
+| 2.6 | 14/11/2026 | Prazo de expiração de 24 horas da chave de desenvolvimento registrado nas restrições |
+| 2.7 | 16/11/2026 | T-034 concluída: coleta account-v1, summoner-v4 e league-v4, persistência de perfil e filas ranqueadas com migração e testes |
 
 ---
 
@@ -1237,5 +1247,6 @@ Pick rate usa as partidas da amostra em que o campeão/função apareceu dividid
 - `npm run tierlist:collect` faz uma coleta manual limitada. O worker agenda a mesma coleta a cada 12 horas.
 - A coleta BR consulta listas de jogadores por faixa de elo, limita o número de jogadores e partidas por variáveis de ambiente, respeita intervalo e `Retry-After`, deduplica partidas/participantes e reprocessa o histórico persistido do patch afetado.
 - A faixa de elo atribuída a uma partida é a do jogador amostrado que forneceu seu histórico; como Match-V5 não informa o elo histórico dos outros nove participantes, esse filtro é uma aproximação e deve ser comunicado como tal.
+- Os filtros “Ferro+” até “Diamante+” são cumulativos: a agregação do worker combina as amostras de jogadores daquela faixa e das faixas superiores, deduplicando cada partida. “Mestre+” corresponde à amostra Master/Grandmaster/Challenger. A faixa continua sendo uma aproximação baseada no jogador amostrado, não no elo histórico de todos os participantes.
 - `npm run tierlist:aggregate` reprocessa as partidas já salvas sem novas chamadas à Riot.
 - `GET /api/v1/tier-list?regiao=br&patch=16.22&elo=all&funcao=all` consulta estatísticas oficiais persistidas. Os filtros aceitos são BR, patches numéricos, elos e funções definidos na tela; respostas têm cache de cinco minutos. Em desenvolvimento, acrescentar `amostra=preliminar` calcula uma prévia a partir das partidas persistidas, sem cache e sem alterar o mínimo oficial; essa opção é desabilitada em produção.

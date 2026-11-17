@@ -4,6 +4,7 @@ import { prisma } from "@/server/db/client";
 import { getChampionCatalog } from "@/server/riot/data-dragon";
 import { aggregateChampionStats } from "@/features/tier-list/application/aggregate-champion-stats";
 import type { ChampionRole } from "@/features/tier-list/domain/champion-entry";
+import { sourceBucketsForEloBucket } from "@/features/tier-list/domain/elo-buckets";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,14 +17,14 @@ const roleValues: Record<string, ChampionRole> = {
   support: "SUPPORT",
 };
 
-const eloValues: Record<string, string> = {
-  iron: "IRON",
-  bronze: "BRONZE",
-  silver: "SILVER",
-  gold: "GOLD",
-  platinum: "PLATINUM",
-  emerald: "EMERALD",
-  diamond: "DIAMOND",
+const eloValues: Record<string, EloBucket> = {
+  iron: "ALL",
+  bronze: "BRONZE_PLUS",
+  silver: "SILVER_PLUS",
+  gold: "GOLD_PLUS",
+  platinum: "PLATINUM_PLUS",
+  emerald: "EMERALD_PLUS",
+  diamond: "DIAMOND_PLUS",
   master: "MASTER_PLUS",
 };
 
@@ -50,7 +51,10 @@ function jsonResponse(body: unknown, status = 200): Response {
   return Response.json(body, {
     status,
     headers: {
-      "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+      "Cache-Control":
+        status >= 400
+          ? "private, no-store"
+          : "public, s-maxage=300, stale-while-revalidate=600",
     },
   });
 }
@@ -63,6 +67,14 @@ function preliminaryJsonResponse(body: unknown): Response {
   });
 }
 
+function getMinimumGames(): number {
+  const minimumGames = Number(process.env.RIOT_MIN_CHAMPION_GAMES ?? 50);
+  if (!Number.isInteger(minimumGames) || minimumGames < 1) {
+    throw new Error("RIOT_MIN_CHAMPION_GAMES must be a positive integer.");
+  }
+  return minimumGames;
+}
+
 export async function GET(request: NextRequest): Promise<Response> {
   const params = request.nextUrl.searchParams;
   const roleFilter = params.get("funcao")?.toLowerCase() ?? "all";
@@ -70,6 +82,11 @@ export async function GET(request: NextRequest): Promise<Response> {
   const region = params.get("regiao")?.toLowerCase() ?? "br";
   const requestedPatch = params.get("patch");
   const preliminary = params.get("amostra") === "preliminar";
+  const eloBucket =
+    eloFilter === "all" ? "ALL" : eloValues[eloFilter];
+  const sourceBuckets = eloBucket
+    ? sourceBucketsForEloBucket(eloBucket)
+    : [];
 
   if (region !== "br") {
     return jsonResponse({ error: "Only the BR region is available." }, 400);
@@ -91,19 +108,21 @@ export async function GET(request: NextRequest): Promise<Response> {
   }
 
   try {
+    const minimumGames = getMinimumGames();
     const patches = await prisma.championStat.findMany({
       where: {
         platform: "BR1",
-        eloBucket:
-          eloFilter === "all"
-            ? "ALL"
-            : (eloValues[eloFilter] as EloBucket),
+        eloBucket,
       },
       select: { patch: true, computedAt: true },
       orderBy: { computedAt: "desc" },
     });
     const matchPatches = await prisma.matchRecord.findMany({
-      where: { platform: "BR1", queueId: 420 },
+      where: {
+        platform: "BR1",
+        queueId: 420,
+        samples: { some: { eloBucket: { in: sourceBuckets } } },
+      },
       select: { patch: true },
       distinct: ["patch"],
     });
@@ -121,10 +140,7 @@ export async function GET(request: NextRequest): Promise<Response> {
             queueId: 420,
             samples: {
               some: {
-                eloBucket:
-                  eloFilter === "all"
-                    ? "ALL"
-                    : (eloValues[eloFilter] as EloBucket),
+                eloBucket: { in: sourceBuckets },
               },
             },
           },
@@ -154,10 +170,10 @@ export async function GET(request: NextRequest): Promise<Response> {
     if (preliminary) {
       const sampleMatches = await prisma.matchSample.findMany({
         where: {
-          eloBucket:
-            eloFilter === "all" ? "ALL" : (eloValues[eloFilter] as EloBucket),
+          eloBucket: { in: sourceBuckets },
           match: { is: { platform: "BR1", patch, queueId: 420 } },
         },
+        distinct: ["matchId"],
         include: {
           match: {
             include: { participants: true, bans: true },
@@ -179,16 +195,16 @@ export async function GET(request: NextRequest): Promise<Response> {
         })),
         bans: match.bans.map(({ championId }) => ({ championId })),
       }));
-      const minGames = Number(process.env.RIOT_MIN_CHAMPION_GAMES ?? 50);
-      if (!Number.isInteger(minGames) || minGames < 1) {
-        throw new Error("RIOT_MIN_CHAMPION_GAMES must be a positive integer.");
-      }
-      const previewStats = aggregateChampionStats(aggregateInput, 1).filter(
+      const previewStats = aggregateChampionStats(
+        aggregateInput.map((match) => ({ ...match, eloBucket })),
+        1,
+      ).filter(
         (stat) => roleFilter === "all" || stat.role === roleValues[roleFilter],
       );
-      const championCatalog = await getChampionCatalog();
+      const championCatalog =
+        previewStats.length > 0 ? await getChampionCatalog() : undefined;
       const data = previewStats.map((stat) => {
-        const champion = championCatalog.get(stat.championId);
+        const champion = championCatalog?.get(stat.championId);
         if (!champion) {
           throw new Error(
             `Champion ${stat.championId} is not present in the current Data Dragon catalog.`,
@@ -207,7 +223,7 @@ export async function GET(request: NextRequest): Promise<Response> {
           kda: stat.kda,
           games: stat.games,
           roleRate: stat.roleRate,
-          lowSample: stat.games < minGames,
+          lowSample: true,
           difficulty: champion.difficulty,
         };
       });
@@ -221,7 +237,7 @@ export async function GET(request: NextRequest): Promise<Response> {
           elo: eloFilter,
           source: "riot",
           preliminary: true,
-          minimumGames: minGames,
+          minimumGames,
           eloMethod:
             "The elo bucket is based on the sampled ranked player's current league tier; it is an approximation for match participants.",
           message:
@@ -231,23 +247,26 @@ export async function GET(request: NextRequest): Promise<Response> {
       });
     }
 
-    const patchIndex = availablePatches.indexOf(patch);
+    const officialPatches = [
+      ...new Set(patches.map(({ patch: availablePatch }) => availablePatch)),
+    ].sort(comparePatchesDescending);
+    const officialPatchIndex = officialPatches.indexOf(patch);
     const previousPatch =
-      patchIndex >= 0 ? availablePatches[patchIndex + 1] : undefined;
+      officialPatchIndex >= 0
+        ? officialPatches[officialPatchIndex + 1]
+        : undefined;
     const stats = await prisma.championStat.findMany({
       where: {
         platform: "BR1",
         patch: { in: previousPatch ? [patch, previousPatch] : [patch] },
-        eloBucket:
-          eloFilter === "all"
-            ? "ALL"
-            : (eloValues[eloFilter] as EloBucket),
+        eloBucket,
         ...(roleFilter === "all" ? {} : { role: roleValues[roleFilter] }),
       },
       orderBy: [{ score: "desc" }, { games: "desc" }],
     });
-    const championCatalog = await getChampionCatalog();
     const currentStats = stats.filter((stat) => stat.patch === patch);
+    const championCatalog =
+      currentStats.length > 0 ? await getChampionCatalog() : undefined;
     const previousByKey = new Map(
       stats
         .filter((stat) => stat.patch === previousPatch)
@@ -258,7 +277,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     );
 
     const data = currentStats.map((stat) => {
-      const champion = championCatalog.get(stat.championId);
+      const champion = championCatalog?.get(stat.championId);
       if (!champion) {
         throw new Error(
           `Champion ${stat.championId} is not present in the current Data Dragon catalog.`,
@@ -293,15 +312,15 @@ export async function GET(request: NextRequest): Promise<Response> {
         difficulty: champion.difficulty,
       };
     });
-    const matchesInDatabase = await prisma.matchSample.count({
+    const sampledMatchIds = await prisma.matchSample.findMany({
       where: {
-        eloBucket:
-          eloFilter === "all"
-            ? "ALL"
-            : (eloValues[eloFilter] as EloBucket),
+        eloBucket: { in: sourceBuckets },
         match: { platform: "BR1", patch, queueId: 420 },
       },
+      select: { matchId: true },
+      distinct: ["matchId"],
     });
+    const matchesInDatabase = sampledMatchIds.length;
 
     const body = {
       data,
@@ -311,6 +330,7 @@ export async function GET(request: NextRequest): Promise<Response> {
         availablePatches,
         elo: eloFilter,
         source: "riot",
+        minimumGames,
         eloMethod:
           "The elo bucket is based on the sampled ranked player's current league tier; it is an approximation for match participants.",
         ...(currentStats.length === 0

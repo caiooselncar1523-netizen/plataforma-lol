@@ -5,6 +5,7 @@ import {
   calculateTierScores,
   tierFromScore,
 } from "../src/features/tier-list/domain/tier-scoring";
+import { sourceBucketsForEloBucket } from "../src/features/tier-list/domain/elo-buckets";
 import type { ChampionRole } from "../src/features/tier-list/domain/champion-entry";
 
 const roles: ChampionRole[] = ["TOP", "JUNGLE", "MID", "ADC", "SUPPORT"];
@@ -81,7 +82,10 @@ test("aggregates rates, bans, role share, KDA and minimum sample size", () => {
       makeMatch(String(index + 1), index === 9 ? "MID" : "TOP", index !== 9),
     ),
   ];
-  const stats = aggregateChampionStats([...matches, matches[0]], 2);
+  const stats = aggregateChampionStats(
+    [...matches, matches[0], { ...matches[0], eloBucket: "MASTER_PLUS" }],
+    2,
+  );
 
   const top = stats.find((stat) => stat.championId === 266 && stat.role === "TOP");
   assert.ok(top);
@@ -100,6 +104,47 @@ test("aggregates rates, bans, role share, KDA and minimum sample size", () => {
     ["TOP"],
   );
   assert.deepEqual(aggregateChampionStats(matches, 5), []);
+});
+
+test("averages per-match KDA and uses one as the minimum death denominator", () => {
+  const matches = Array.from({ length: 10 }, (_, index) =>
+    makeMatch(String(index + 1), "TOP", true),
+  );
+  const firstParticipant = matches[0]?.participants[0];
+  const secondParticipant = matches[1]?.participants[0];
+  assert.ok(firstParticipant);
+  assert.ok(secondParticipant);
+  firstParticipant.kills = 10;
+  firstParticipant.deaths = 0;
+  firstParticipant.assists = 0;
+  secondParticipant.kills = 0;
+  secondParticipant.deaths = 10;
+  secondParticipant.assists = 0;
+
+  const aatrox = aggregateChampionStats(matches, 2).find(
+    (stat) => stat.championId === 266 && stat.role === "TOP",
+  );
+
+  assert.ok(aatrox);
+  assert.equal(aatrox.kda, 3.8);
+});
+
+test("cumulative elo filters include the selected rank and every higher rank", () => {
+  assert.deepEqual(sourceBucketsForEloBucket("ALL"), ["ALL"]);
+  assert.deepEqual(sourceBucketsForEloBucket("BRONZE_PLUS"), [
+    "BRONZE",
+    "SILVER",
+    "GOLD",
+    "PLATINUM",
+    "EMERALD",
+    "DIAMOND",
+    "MASTER_PLUS",
+  ]);
+  assert.deepEqual(sourceBucketsForEloBucket("DIAMOND_PLUS"), [
+    "DIAMOND",
+    "MASTER_PLUS",
+  ]);
+  assert.deepEqual(sourceBucketsForEloBucket("MASTER_PLUS"), ["MASTER_PLUS"]);
 });
 
 test("rejects a non-positive minimum sample size", () => {

@@ -1,5 +1,5 @@
-import TierListPage from "@/features/tier-list/ui/tier-list-page";
+import HomePage from "@/features/home/ui/home-page";
 
 export default function Home() {
-  return <TierListPage />;
+  return <HomePage />;
 }

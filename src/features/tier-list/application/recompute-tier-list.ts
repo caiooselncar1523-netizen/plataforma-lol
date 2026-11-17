@@ -1,6 +1,10 @@
 import type { EloBucket } from "@prisma/client";
 import { prisma } from "@/server/db/client";
 import {
+  cumulativeEloBuckets,
+  rankedEloBuckets,
+} from "../domain/elo-buckets";
+import {
   aggregateChampionStats,
   type AggregationMatch,
 } from "./aggregate-champion-stats";
@@ -24,6 +28,7 @@ export async function recomputeTierListStats(
     },
   });
   const cohorts = new Map<string, AggregationMatch[]>();
+  const samplesByPatch = new Map<string, Map<EloBucket, AggregationMatch[]>>();
   for (const sample of persistedSamples) {
     const match = sample.match;
     const key = `${match.patch}:${sample.eloBucket}`;
@@ -44,6 +49,28 @@ export async function recomputeTierListStats(
       bans: match.bans.map(({ championId }) => ({ championId })),
     });
     cohorts.set(key, cohort);
+
+    if (sample.eloBucket !== "ALL") {
+      const byBucket = samplesByPatch.get(match.patch) ?? new Map();
+      const bucketMatches = byBucket.get(sample.eloBucket) ?? [];
+      bucketMatches.push(cohort[cohort.length - 1]!);
+      byBucket.set(sample.eloBucket, bucketMatches);
+      samplesByPatch.set(match.patch, byBucket);
+    }
+  }
+
+  for (const [patch, byBucket] of samplesByPatch) {
+    for (const { bucket, from } of cumulativeEloBuckets) {
+      const startIndex = rankedEloBuckets.indexOf(from);
+      const sourceBuckets = rankedEloBuckets.slice(startIndex);
+      const matchesById = new Map<string, AggregationMatch>();
+      for (const sourceBucket of sourceBuckets) {
+        for (const match of byBucket.get(sourceBucket) ?? []) {
+          matchesById.set(match.matchId, { ...match, eloBucket: bucket });
+        }
+      }
+      cohorts.set(`${patch}:${bucket}`, [...matchesById.values()]);
+    }
   }
 
   let statsComputed = 0;

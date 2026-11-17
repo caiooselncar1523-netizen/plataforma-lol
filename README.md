@@ -8,8 +8,11 @@ personalizadas.
 
 ## Estado do projeto
 
-A fundação técnica (T-014) está em andamento. O layout e o tema do frontend
-serão desenvolvidos na tarefa T-015, depois da fundação.
+A fundação local do backend (T-014) e a configuração inicial do frontend (T-015)
+estão concluídas. O cliente da Riot (T-016) e a integração do Data Dragon (T-017)
+estão parcialmente implementados; staging/CI (T-018), monitoramento e backups
+(T-019) e a landing com páginas legais (T-020) ainda estão pendentes. Os status
+e critérios completos estão no backlog.
 
 O planejamento e a arquitetura estão no
 [documento de requisitos](documentação/Documento%20de%20Requisitos%20%E2%80%93%20Plataforma%20de%20An%C3%A1lise%20de%20League%20of%20Legends%20%281%29.md).

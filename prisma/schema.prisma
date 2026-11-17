@@ -19,11 +19,17 @@ enum EloBucket {
   ALL
   IRON
   BRONZE
+  BRONZE_PLUS
   SILVER
+  SILVER_PLUS
   GOLD
+  GOLD_PLUS
   PLATINUM
+  PLATINUM_PLUS
   EMERALD
+  EMERALD_PLUS
   DIAMOND
+  DIAMOND_PLUS
   MASTER_PLUS
 }
 
@@ -62,6 +68,33 @@ model RankedPlayerSample {
   lastSampledAt DateTime  @default(now())
 
   @@index([platform, eloBucket, lastSampledAt])
+}
+
+model PlayerProfile {
+  puuid          String              @id
+  platform       String              @default("BR1")
+  gameName       String
+  tagLine        String
+  profileIconId  Int
+  summonerLevel  Int
+  fetchedAt      DateTime            @updatedAt
+  rankedEntries  PlayerRankedEntry[]
+
+  @@index([platform, gameName, tagLine])
+}
+
+model PlayerRankedEntry {
+  profilePuuid  String
+  queueType     String
+  tier          String
+  division      String
+  leaguePoints  Int
+  wins          Int
+  losses        Int
+  profile       PlayerProfile @relation(fields: [profilePuuid], references: [puuid], onDelete: Cascade)
+
+  @@id([profilePuuid, queueType])
+  @@index([queueType, tier])
 }
 
 model MatchParticipant {
