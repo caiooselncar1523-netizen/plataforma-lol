@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test } from "vitest";
 import { NextRequest } from "next/server";
-import { GET } from "../src/app/api/v1/players/lookup/route";
+import { GET } from "../../../src/app/api/v1/players/lookup/route";
 
 const originalApiKey = process.env.RIOT_API_KEY;
 const originalFetch = globalThis.fetch;

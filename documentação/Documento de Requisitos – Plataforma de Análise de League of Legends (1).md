@@ -1,6 +1,6 @@
 # Documento de Requisitos de Software (DRS)
 
-**Projeto:** Ahriademia — Plataforma de Análise de League of Legends **Versão:** 1.6 **Data:** 13/11/2026 **Status:** Pipeline de dados da tier list em implementação
+**Projeto:** Ahriademia — Plataforma de Análise de League of Legends **Versão:** 3.0 **Data:** 21/11/2026 **Status:** Pipeline de dados da tier list em implementação
 
 ---
 
@@ -95,12 +95,12 @@ Legenda de prioridade: **D** = Deve, **DV** = Deveria, **P** = Poderia. A coluna
 
 | ID | Requisito | Prior. | Fase |
 | --- | --- | --- | --- |
-| RF-CP-01 | Página de cada campeão com estatísticas por função | D | 2 |
-| RF-CP-02 | Build mais vencedora (itens, ordem de compra e botas) | DV | 2 |
-| RF-CP-03 | Runas e feitiços mais usados | DV | 2 |
-| RF-CP-04 | Ordem de habilidades recomendada | DV | 2 |
-| RF-CP-05 | Seletor de contadores (escolher o inimigo e ver os melhores picks) | DV | 3 |
-| RF-CP-06 | Página de duplas de bot lane e de selva | P | 3 |
+| RF-CP-01 | Página individual de cada campeão, acessível por link explícito na Tier List, com seletor de função e filtros de patch e elo; exibir win rate, pick rate, ban rate, KDA e número de partidas | D | 2 |
+| RF-CP-02 | Exibir builds mais usadas e de melhor desempenho por função, incluindo ordem de compra, itens principais e botas, sempre com número de partidas e tamanho da amostra | DV | 2 |
+| RF-CP-03 | Exibir combinações de runas e feitiços de invocador mais usadas por função, patch e elo | DV | 2 |
+| RF-CP-04 | Exibir a ordem de evolução das habilidades por nível, agregada de eventos de timeline e identificada com sua amostra | DV | 3 |
+| RF-CP-05 | Seletor de confronto para consultar campeões que enfrentam melhor o campeão escolhido, com função, patch, elo, partidas e win rate | DV | 3 |
+| RF-CP-06 | Exibir melhores duplas de rota inferior e sinergias de selva com partidas e resultados observados | P | 3 |
 | RF-CP-07 | Banco de dados de itens e de skins | P | 4 |
 
 ### 3.3 Módulo Busca e Perfil (PF)
@@ -379,6 +379,7 @@ Cada fase deve terminar com uma versão publicada e testada, para coletar feedba
 | Módulo | Critério de aceite |
 | --- | --- |
 | Tier List | Exibe todos os campeões do patch atual em tiers corretos, com filtros funcionando e valores coerentes com os dados do banco |
+| Páginas de campeões | Cada página identifica campeão e função, permite filtrar patch/elo e apresenta estatísticas, builds e confrontos com tamanho da amostra; não sugere recomendações quando a amostra é insuficiente |
 | Busca e perfil | Ao digitar um Riot ID válido, o perfil carrega com elo e estatísticas; ID inexistente mostra mensagem clara |
 | Histórico e detalhe | Lista as últimas partidas e abre o detalhe com os 10 jogadores sem erros |
 | Análise com IA | Para uma partida válida, gera notas, pontos fortes e fracos e um texto coerente com as métricas, em até 30 segundos |
@@ -423,6 +424,8 @@ Os testes acompanham cada fase. Quanto mais cedo um erro for achado, mais barato
 | CT-09 | Falha do LLM | Simular indisponibilidade do serviço de IA | Métricas e gráficos aparecem; texto fica pendente com opção de tentar novamente |
 | CT-10 | Atualização do perfil | Pedir atualização duas vezes seguidas | Segunda tentativa recusada com aviso do tempo de espera |
 | CT-11 | Exclusão de conta | Solicitar a exclusão dos dados | Dados pessoais removidos e confirmação enviada |
+| CT-15 | Página de campeão com filtros | Abrir um campeão e alternar função, patch e elo | URL e conteúdo correspondem aos filtros; estatísticas mostram a quantidade de partidas da amostra |
+| CT-16 | Amostra insuficiente de campeão/confronto | Abrir uma página ou confronto sem partidas suficientes | Sistema informa amostra insuficiente e não apresenta build, counter ou taxa como recomendação confiável |
 | CT-12 | Partida ao vivo | Buscar um jogador que está em partida | Os 10 participantes são exibidos com seus dados |
 | CT-13 | Jogador fora de partida | Buscar um jogador que não está jogando | Mensagem informando que não há partida em andamento |
 | CT-14 | Celular | Abrir a tier list em tela pequena | Layout adaptado, sem rolagem horizontal da página |
@@ -661,11 +664,12 @@ A chave de produção pode demorar. Um produto público não pode rodar com a ch
 | T-039 | Maestria dos campeões | T-034 | P | Maestria exibida | ☐ |
 | T-040 | Botão de atualizar o perfil com intervalo mínimo entre atualizações | T-035 | P | CT-10 passa | ☐ |
 | T-041 | Detalhe da partida: 10 jogadores, itens, dano, ouro, visão e objetivos | T-037 | G | Tela de detalhe completa | ☐ |
-| T-042 | Páginas de campeões: estatísticas por função, build, runas e ordem de habilidades, com SEO (títulos, URLs amigáveis e mapa do site) | T-025, T-017 | G | Páginas indexáveis | ☐ |
-| T-043 | Contadores e duplas na tier list e nas páginas de campeões | T-042 | M | Contadores exibidos | ☐ |
+| T-042a | Persistir dados de build por participante (itens finais, runas e feitiços) com patch, função e faixa da amostra | T-023, T-017 | M | Dados deduplicados salvos e validados em partidas de amostra | ☐ |
+| T-042 | Páginas de campeões: estatísticas por função, builds e runas filtráveis por patch/elo, quantidade de partidas e SEO; entrada por link explícito na Tier List | T-025, T-017, T-042a | G | CT-15 e CT-16 passam; dados insuficientes ficam claramente sinalizados | ☐ |
+| T-043 | Contadores e duplas por função, patch e elo, com número de partidas e aviso quando a amostra for insuficiente | T-042 | M | Confrontos e sinergias conferidos em amostra e sem recomendações enganosas | ☐ |
 | T-044 | Painel administrativo básico (status da coleta, fila e erros) | T-023 | M | Painel mostra a saúde do sistema | ☐ |
 | T-045 | Tooltips e glossário em português nas telas existentes | T-041 | M | Termos explicados nas telas | ☐ |
-| T-046 | Testes de aceite da fase 2, teste de carga leve e revisão de segurança | T-041 a T-045 | M | Sem defeitos críticos | ☐ |
+| T-046 | Testes de aceite da fase 2, teste de carga leve e revisão de segurança | T-041, T-042a, T-042, T-043, T-044, T-045 | M | Sem defeitos críticos | ☐ |
 
 > **Marco 2: Alpha fechado.** Com a chave de produção aprovada, o site pode abrir para um grupo pequeno de jogadores.
 
@@ -673,7 +677,9 @@ A chave de produção pode demorar. Um produto público não pode rodar com a ch
 
 | # | Tarefa | Depende | Esf. | Pronto quando | Status |
 | --- | --- | --- | --- | --- | --- |
-| T-047 | Coletar e guardar a timeline das partidas | T-036 | M | Timeline salva por partida | ☐ |
+| T-047 | Coletar e guardar a timeline das partidas, incluindo eventos de compra de itens e evolução de habilidades | T-036 | M | Timeline e eventos de compra/evolução salvos por partida | ☐ |
+| T-042b | Exibir ordem de evolução de habilidades por nível nas páginas de campeões | T-042, T-047 | M | Ordem calculada a partir das timelines e acompanhada do tamanho da amostra | ☐ |
+| T-042c | Exibir ordem de compra dos itens nas builds de campeões, agregada dos eventos de timeline | T-042, T-047 | M | Sequências de compra representativas exibidas com quantidade de partidas e aviso de amostra insuficiente | ☐ |
 | T-048 | Calcular métricas: CS, ouro e XP aos 10 e 15 minutos, mortes por minuto, visão e participação em objetivos | T-047 | G | Métricas conferidas em amostra | ☐ |
 | T-049 | Gerar benchmarks por campeão, função, patch e elo, com amostra mínima | T-025, T-048 | G | Tabela de benchmarks pronta | ☐ |
 | T-050 | Comparar a partida com os benchmarks e detectar pontos fortes e fracos por regras | T-049 | M | Lista de pontos por partida | ☐ |
@@ -785,7 +791,9 @@ A ordem abaixo é intencional: **moderação primeiro, recursos sociais depois.*
 | Tier list (T-030) | T-031: pedir a chave de produção; depois T-032 (busca) |
 | Tela do perfil (T-035) | **T-036: histórico de partidas** |
 | Histórico de partidas (T-037) | T-038, T-039 e T-040, depois T-041 (detalhe da partida) |
-| Detalhe da partida (T-041) | T-042: páginas de campeões |
+| Estatísticas da tier list (T-025) e dados estáticos (T-017) | T-042a: persistir builds; depois T-042: páginas de campeões |
+| Timeline das partidas (T-047) | T-042b: mostrar a ordem de habilidades; T-042c: mostrar a ordem de compra dos itens |
+| Página de campeão (T-042) | T-043: confrontos e sinergias por função |
 | Fase 2 (T-046) | T-047: coletar a timeline das partidas |
 | Beta da análise (T-060) | T-061: política de idade e termos, depois T-062 (contas) |
 | Contas (T-071) | T-072: partida ao vivo |
@@ -1127,7 +1135,11 @@ O formulário da Riot é em inglês, por isso o texto abaixo está em inglês. A
 
 ### 22.4 Estado atual do projeto
 
-Projeto: **Ahriademia**. T-001, T-002, T-003, T-005, T-006, T-007, T-014, T-015 e T-021 a T-024 estão concluídas. A T-004 permanece em andamento: nome e slogan definidos e disponibilidade dos domínios pretendidos informada pelo desenvolvedor; o domínio ainda não foi comprado. A T-005 está concluída com o repositório Git, o backlog na seção 19 e as convenções em `CONTRIBUTING.md`. A T-014 foi validada localmente: PostgreSQL saudável no Docker, endpoint de saúde respondendo com banco conectado e worker conectado ao PostgreSQL. A T-015 foi concluída: o frontend Next.js, a identidade visual aplicada à tela da tier list e os textos em português estão implementados para execução local; isso não significa que todas as telas do protótipo (T-012) estejam prontas. T-016 está parcialmente implementada: o cliente Riot tem intervalo mínimo entre chamadas, novas tentativas para falhas de rede, 429 e 5xx, e erros tipados, mas falta validar o controle de taxa no worker e garantir o registro explícito das falhas. T-017 está parcialmente implementada: existe consulta ao Data Dragon para catálogo de campeões, mas os dados não são persistidos no banco e itens, runas, imagens e atualização automatizada por patch ainda faltam. T-018, T-019 e T-020 continuam pendentes: não há staging protegido/CI, monitoramento com alertas e backup automático, nem landing publicada com páginas legais e aviso da Riot. T-022 e T-023 já coletam e persistem jogadores amostrados e partidas; o job de agregação de T-025 e a fórmula de T-026 estão implementados e cobertos por testes, mas T-025 permanece parcial porque a execução com mínimo configurado de 50 partidas não gerou registros na tabela oficial: nenhum grupo campeão/função atingiu a amostra, então é necessário coletar mais partidas antes de satisfazer o critério “Tabela de estatísticas gerada”. O KDA segue a definição documentada de média por partida de `(abates + assistências) / max(mortes, 1)`. T-027 está concluída e foi validada com respostas oficiais e preliminares, filtros e cache; a API mantém a classificação oficial vazia quando não há dados que atinjam o mínimo. T-028 segue em andamento: a tela está integrada e foi testada no navegador com filtros de rota/elo, mas a comparação real entre patches ainda depende de estatísticas oficiais em patches consecutivos. T-029 está concluída: carregamento, vazio e erro verificados; a página não gera rolagem horizontal nem a 320 px, mantendo a tabela rolável dentro de seu contêiner. T-030 permanece em andamento, pois a conferência de classificação oficial depende de amostra suficiente. T-032 está concluída: a API valida o Riot ID, consulta o PUUID na Riot sem expô-lo ao navegador e trata formato inválido, conta não encontrada, região não habilitada e limitação de requisições com mensagens em português. T-033 está concluída: a home permite buscar na região BR, separar automaticamente um Riot ID colado em qualquer campo, reaproveitar buscas recentes e encaminhar a conta validada para a área do jogador; os estados de carregamento e erro são acessíveis. T-034 está concluída: a busca consulta account-v1, summoner-v4 e league-v4 no servidor e persiste Riot ID, nível, ícone e entradas ranqueadas (elo, divisão, LP, vitórias e derrotas) no PostgreSQL; perfis sem ranqueada são salvos com a lista de filas vazia. A tela detalhada continua na T-035. A migração de faixas cumulativas de elo e a migração de perfis foram aplicadas localmente. Foram consultados 8 jogadores e persistidas 27 partidas ranqueadas do BR; no patch 16.22 há 9 partidas e a prévia identifica 69 combinações campeão/função. Nenhuma combinação atingiu o mínimo local de 50 jogos para publicação oficial, portanto essa prévia continua explicitamente não confiável. T-031 depende de T-030, da landing/ambiente de teste de T-020 e do registro externo do produto na Riot; permanece pendente. A T-013 (teste com jogadores) permanece pendente. A compra do domínio continua sendo uma pendência da identidade (T-004), sem impedir as tarefas já concluídas deste épico.
+Projeto: **Ahriademia**. T-001, T-002, T-003, T-005, T-006, T-007, T-014, T-015 e T-021 a T-024 estão concluídas. A T-004 permanece em andamento: nome e slogan definidos e disponibilidade dos domínios pretendidos informada pelo desenvolvedor; o domínio ainda não foi comprado. A T-005 está concluída com o repositório Git, o backlog na seção 19 e as convenções em `CONTRIBUTING.md`. A T-014 foi validada localmente: PostgreSQL saudável no Docker, endpoint de saúde respondendo com banco conectado e worker conectado ao PostgreSQL. A T-015 foi concluída: o frontend Next.js, a identidade visual aplicada à tela da tier list e os textos em português estão implementados para execução local; isso não significa que todas as telas do protótipo (T-012) estejam prontas. T-016 está parcialmente implementada: o cliente Riot tem intervalo mínimo entre chamadas, novas tentativas para falhas de rede, 429 e 5xx, e erros tipados, mas falta validar o controle de taxa no worker e garantir o registro explícito das falhas. T-017 está parcialmente implementada: existe consulta ao Data Dragon para catálogo de campeões, mas os dados não são persistidos no banco e itens, runas, imagens e atualização automatizada por patch ainda faltam. T-018, T-019 e T-020 continuam pendentes: não há staging protegido/CI, monitoramento com alertas e backup automático, nem landing publicada com páginas legais e aviso da Riot. T-022 e T-023 já coletam e persistem jogadores amostrados e partidas; o job de agregação de T-025 e a fórmula de T-026 estão implementados e cobertos por testes, mas T-025 permanece parcial porque a execução com mínimo configurado de 50 partidas não gerou registros na tabela oficial: nenhum grupo campeão/função atingiu a amostra, então é necessário coletar mais partidas antes de satisfazer o critério “Tabela de estatísticas gerada”. O KDA segue a definição documentada de média por partida de `(abates + assistências) / max(mortes, 1)`. T-027 está concluída e foi validada com respostas oficiais e preliminares, filtros e cache; a API mantém a classificação oficial vazia quando não há dados que atinjam o mínimo. T-028 segue em andamento: a tela e a comparação de patches nas visualizações de cards e tabela passaram no E2E com respostas simuladas; validar a comparação real ainda depende de estatísticas oficiais em patches consecutivos. T-029 está concluída: carregamento, vazio e erro verificados; a página não gera rolagem horizontal nem a 320 px, mantendo a tabela rolável dentro de seu contêiner. T-030 permanece em andamento: CT-04 passou com dados simulados, mas a conferência da classificação oficial depende de amostra real suficiente. T-032 está concluída: a API valida o Riot ID, consulta o PUUID na Riot sem expô-lo ao navegador e trata formato inválido, conta não encontrada, região não habilitada e limitação de requisições com mensagens em português. T-033 está concluída: a home permite buscar na região BR, separar automaticamente um Riot ID colado em qualquer campo, reaproveitar buscas recentes e encaminhar a conta validada para a área do jogador; os estados de carregamento e erro são acessíveis. T-034 está concluída: a busca consulta account-v1, summoner-v4 e league-v4 no servidor e persiste Riot ID, nível, ícone e entradas ranqueadas (elo, divisão, LP, vitórias e derrotas) no PostgreSQL; perfis sem ranqueada são salvos com a lista de filas vazia. A tela detalhada continua na T-035. A migração de faixas cumulativas de elo e a migração de perfis foram aplicadas localmente. Foram consultados 8 jogadores e persistidas 27 partidas ranqueadas do BR; no patch 16.22 há 9 partidas e a prévia identifica 69 combinações campeão/função. Nenhuma combinação atingiu o mínimo local de 50 jogos para publicação oficial, portanto essa prévia continua explicitamente não confiável. A suíte automatizada tem 25 testes unitários/de integração e 1 E2E aprovados; cobertura atual de linhas de 64,72% nos módulos `.ts` instrumentados (componentes `.tsx` são validados pelo E2E e não entram nesse percentual). T-031 depende de T-030, da landing/ambiente de teste de T-020 e do registro externo do produto na Riot; permanece pendente. A T-013 (teste com jogadores) permanece pendente. A compra do domínio continua sendo uma pendência da identidade (T-004), sem impedir as tarefas já concluídas deste épico.
+
+As páginas individuais de campeões estão especificadas em RF-CP-01 a RF-CP-07, mas ainda não implementadas. O backlog separa a persistência de itens, runas e feitiços (T-042a), a página de estatísticas e builds (T-042), a ordem de habilidades a partir de timelines (T-042b, dependente de T-047) e os confrontos/sinergias (T-043). A página do campeão é diferente do perfil do jogador (T-035) e deve sinalizar amostras insuficientes em vez de apresentar recomendações sem suporte.
+
+A coleta da tier list foi ajustada em 21/11: cada execução prioriza jogadores nunca coletados ou há mais tempo sem coleta, e grava o horário da amostra somente após concluir o processamento. A rotina automática pode selecionar até 80 jogadores por execução (ajustável pela variável do Actions), reaproveita partidas já salvas sem buscar novamente seus detalhes e atualiza os grupos de elo associados. Isso melhora a cobertura e reduz chamadas repetidas, mas o tempo para atingir 50 partidas por campeão/função ainda depende da disponibilidade de partidas ranqueadas e dos limites da API Riot.
 
 ### 22.5 Histórico de revisões (continuação)
 
@@ -1161,6 +1173,8 @@ Projeto: **Ahriademia**. T-001, T-002, T-003, T-005, T-006, T-007, T-014, T-015 
 | 2.6 | 14/11/2026 | Prazo de expiração de 24 horas da chave de desenvolvimento registrado nas restrições |
 | 2.7 | 16/11/2026 | T-034 concluída: coleta account-v1, summoner-v4 e league-v4, persistência de perfil e filas ranqueadas com migração e testes |
 | 2.8 | 17/11/2026 | Workflow do GitHub definido como agendador único; cron executa às 00:17, 10:17 e 20:17 UTC e o worker não agenda coletas paralelas |
+| 2.9 | 18/11/2026 | Requisitos das páginas de campeões detalhados: estatísticas, builds, runas, confrontos, sinergias, amostras e ordem de habilidades baseada em timelines |
+| 3.0 | 21/11/2026 | Coletor passa a rotacionar jogadores por tempo desde a última amostra, reutilizar partidas persistidas e selecionar até 80 jogadores por execução automática |
 
 ---
 

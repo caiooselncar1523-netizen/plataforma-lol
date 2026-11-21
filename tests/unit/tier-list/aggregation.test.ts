@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
-import test from "node:test";
-import { aggregateChampionStats } from "../src/features/tier-list/application/aggregate-champion-stats";
+import { test } from "vitest";
+import { aggregateChampionStats } from "../../../src/features/tier-list/application/aggregate-champion-stats";
 import {
   calculateTierScores,
   tierFromScore,
-} from "../src/features/tier-list/domain/tier-scoring";
-import { sourceBucketsForEloBucket } from "../src/features/tier-list/domain/elo-buckets";
-import type { ChampionRole } from "../src/features/tier-list/domain/champion-entry";
+} from "../../../src/features/tier-list/domain/tier-scoring";
+import { sourceBucketsForEloBucket } from "../../../src/features/tier-list/domain/elo-buckets";
+import type { ChampionRole } from "../../../src/features/tier-list/domain/champion-entry";
 
 const roles: ChampionRole[] = ["TOP", "JUNGLE", "MID", "ADC", "SUPPORT"];
 
@@ -76,6 +76,31 @@ test("scores champions by role-cohort percentiles and shrinks low-sample scores"
   assert.ok((confidenceScores[1] ?? 50) > 70);
 });
 
+test("applies the documented metric weights to isolated percentile changes", () => {
+  const scorePair = (
+    metric: "winRate" | "pickRate" | "banRate" | "kda",
+    lower: number,
+    higher: number,
+  ) => {
+    const baseline = {
+      winRate: 50,
+      pickRate: 10,
+      banRate: 5,
+      kda: 2,
+      games: 1000,
+    };
+    return calculateTierScores([
+      { ...baseline, [metric]: lower },
+      { ...baseline, [metric]: higher },
+    ]);
+  };
+
+  assert.deepEqual(scorePair("winRate", 40, 60), [38.64, 61.36]);
+  assert.deepEqual(scorePair("pickRate", 10, 20), [45.45, 54.55]);
+  assert.deepEqual(scorePair("banRate", 5, 15), [45.45, 54.55]);
+  assert.deepEqual(scorePair("kda", 1, 3), [47.73, 52.27]);
+});
+
 test("aggregates rates, bans, role share, KDA and minimum sample size", () => {
   const matches = [
     ...Array.from({ length: 10 }, (_, index) =>
@@ -104,6 +129,34 @@ test("aggregates rates, bans, role share, KDA and minimum sample size", () => {
     ["TOP"],
   );
   assert.deepEqual(aggregateChampionStats(matches, 5), []);
+});
+
+test("produces official candidates at the 50-game minimum only with role diversity", () => {
+  const championIds = [1, 2, 3, 4, 5];
+  const matches = Array.from({ length: 50 }, (_, index) => ({
+    matchId: `minimum-${index}`,
+    patch: "16.23",
+    eloBucket: "DIAMOND",
+    participants: championIds.map((championId) => ({
+      championId,
+      championKey: `Champion${championId}`,
+      role: "MID" as const,
+      won: championId % 2 === 0,
+      kills: championId,
+      deaths: 2,
+      assists: 3,
+    })),
+    bans: [{ championId: 1 }],
+  }));
+  const stats = aggregateChampionStats(matches, 50);
+
+  assert.equal(stats.length, 5);
+  assert.ok(stats.every((stat) => stat.games === 50));
+  assert.ok(stats.every((stat) => stat.role === "MID"));
+  assert.ok(stats.every((stat) => stat.patch === "16.23"));
+  assert.ok(stats.every((stat) => stat.eloBucket === "DIAMOND"));
+  assert.deepEqual(aggregateChampionStats(matches.slice(0, 49), 50), []);
+  assert.deepEqual(aggregateChampionStats(matches, 51), []);
 });
 
 test("averages per-match KDA and uses one as the minimum death denominator", () => {

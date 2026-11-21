@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test } from "vitest";
 import {
   collectPlayerProfile,
   type PlayerProfileRepository,
   type PlayerProfileRiotClient,
   type PlayerProfileSnapshot,
-} from "../src/features/player-profile/application/collect-player-profile";
+} from "../../../src/features/player-profile/application/collect-player-profile";
 
 class FakeRiotClient implements PlayerProfileRiotClient {
   readonly urls: string[] = [];

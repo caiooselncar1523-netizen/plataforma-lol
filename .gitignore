@@ -18,9 +18,12 @@ htmlcov/
 node_modules/
 .next/
 .next-tierlist-preview/
+.next-e2e/
 out/
 dist/
 coverage/
+playwright-report/
+test-results/
 .eslintcache
 *.tsbuildinfo
 

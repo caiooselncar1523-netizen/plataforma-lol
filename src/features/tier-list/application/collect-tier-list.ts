@@ -1,6 +1,7 @@
 import { prisma } from "@/server/db/client";
 import { RiotApiClient } from "@/server/riot/client";
 import type { ChampionRole } from "../domain/champion-entry";
+import { chooseRankedPlayers } from "./choose-ranked-players";
 import { recomputeTierListStats } from "./recompute-tier-list";
 
 type LeagueEntry = {
@@ -137,60 +138,46 @@ async function loadRankedPlayers(
   return players;
 }
 
-function choosePlayers(
-  playersByBucket: Map<EloBucket, string[]>,
-  maximum: number,
-): Array<{ puuid: string; eloBucket: EloBucket }> {
-  const selected: Array<{ puuid: string; eloBucket: EloBucket }> = [];
-  const offsets = new Map<EloBucket, number>();
-
-  while (selected.length < maximum) {
-    let addedInRound = false;
-    for (const bucket of bucketOrder) {
-      if (selected.length >= maximum) break;
-      const candidates = playersByBucket.get(bucket) ?? [];
-      const offset = offsets.get(bucket) ?? 0;
-      const puuid = candidates[offset];
-      if (!puuid) continue;
-      selected.push({ puuid, eloBucket: bucket });
-      offsets.set(bucket, offset + 1);
-      addedInRound = true;
-    }
-    if (!addedInRound) break;
-  }
-
-  return selected;
-}
-
 export async function collectTierList(): Promise<{
   playersSampled: number;
   matchesStored: number;
   statsComputed: number;
 }> {
   const riot = new RiotApiClient();
-  const maxPlayers = readPositiveInteger("RIOT_COLLECTION_MAX_PLAYERS", 8, 80);
+  const maxPlayers = readPositiveInteger("RIOT_COLLECTION_MAX_PLAYERS", 40, 80);
   const matchesPerPlayer = readPositiveInteger(
     "RIOT_COLLECTION_MATCHES_PER_PLAYER",
-    3,
+    10,
     10,
   );
   const minimumGames = readPositiveInteger("RIOT_MIN_CHAMPION_GAMES", 50, 1000);
   const playersByBucket = await loadRankedPlayers(riot);
-  const selectedPlayers = choosePlayers(playersByBucket, maxPlayers);
+  const candidatePuuids = [
+    ...new Set([...playersByBucket.values()].flat()),
+  ];
+  if (candidatePuuids.length === 0) {
+    throw new Error("Riot did not return ranked player PUUIDs for BR1.");
+  }
+  const savedPlayerSamples = await prisma.rankedPlayerSample.findMany({
+    where: { platform: "BR1", puuid: { in: candidatePuuids } },
+    select: { puuid: true, lastSampledAt: true },
+  });
+  const lastSampledAtByPuuid = new Map(
+    savedPlayerSamples.map(({ puuid, lastSampledAt }) => [
+      puuid,
+      lastSampledAt,
+    ]),
+  );
+  const selectedPlayers = chooseRankedPlayers(
+    playersByBucket,
+    bucketOrder,
+    maxPlayers,
+    lastSampledAtByPuuid,
+  );
   if (selectedPlayers.length === 0) {
     throw new Error("Riot did not return ranked player PUUIDs for BR1.");
   }
-  await prisma.$transaction(
-    selectedPlayers.map(({ puuid, eloBucket }) =>
-      prisma.rankedPlayerSample.upsert({
-        where: { puuid },
-        create: { puuid, platform: "BR1", eloBucket },
-        update: { eloBucket, lastSampledAt: new Date() },
-      }),
-    ),
-  );
 
-  const sampleByMatch = new Map<string, { eloBucket: EloBucket; match: MatchList }>();
   const matchSamples = new Map<string, Set<EloBucket>>();
   for (const player of selectedPlayers) {
     const ids = await riot.get<string[]>(
@@ -201,20 +188,39 @@ export async function collectTierList(): Promise<{
       samples.add(player.eloBucket);
       samples.add("ALL");
       matchSamples.set(matchId, samples);
-      if (sampleByMatch.has(matchId)) continue;
-
-      const match = await riot.get<MatchList>(
-        `${regionRouting}/lol/match/v5/matches/${encodeURIComponent(matchId)}`,
-      );
-      if (match.info.queueId === 420) {
-        sampleByMatch.set(matchId, { eloBucket: player.eloBucket, match });
-      }
     }
   }
 
+  const matchIds = [...matchSamples.keys()];
+  const existingMatches = await prisma.matchRecord.findMany({
+    where: { matchId: { in: matchIds } },
+    select: { matchId: true, patch: true },
+  });
+  const existingMatchIds = new Set(
+    existingMatches.map(({ matchId }) => matchId),
+  );
   const changedPatches = new Set<string>();
+  const existingMatchSamples = existingMatches.flatMap(({ matchId, patch }) => {
+    changedPatches.add(patch);
+    const samples = matchSamples.get(matchId);
+    return samples
+      ? [...samples].map((eloBucket) => ({ matchId, eloBucket }))
+      : [];
+  });
+  if (existingMatchSamples.length > 0) {
+    await prisma.matchSample.createMany({
+      data: existingMatchSamples,
+      skipDuplicates: true,
+    });
+  }
+
   let matchesStored = 0;
-  for (const [matchId, { match }] of sampleByMatch) {
+  for (const matchId of matchIds) {
+    if (existingMatchIds.has(matchId)) continue;
+    const match = await riot.get<MatchList>(
+      `${regionRouting}/lol/match/v5/matches/${encodeURIComponent(matchId)}`,
+    );
+    if (match.info.queueId !== 420) continue;
     const patch = patchFromVersion(match.info.gameVersion);
     if (!patch || match.info.participants.length !== 10) continue;
     changedPatches.add(patch);
@@ -244,7 +250,8 @@ export async function collectTierList(): Promise<{
         .filter((ban) => ban.championId > 0)
         .map((ban) => ({ teamId: team.teamId, championId: ban.championId })),
     );
-    const samples = matchSamples.get(matchId) ?? new Set([sampleByMatch.get(matchId)!.eloBucket]);
+    const samples = matchSamples.get(matchId);
+    if (!samples) continue;
 
     await prisma.$transaction(async (transaction) => {
       await transaction.matchRecord.upsert({
@@ -279,6 +286,16 @@ export async function collectTierList(): Promise<{
   const statsComputed = await recomputeTierListStats(
     [...changedPatches],
     minimumGames,
+  );
+  const sampledAt = new Date();
+  await prisma.$transaction(
+    selectedPlayers.map(({ puuid, eloBucket }) =>
+      prisma.rankedPlayerSample.upsert({
+        where: { puuid },
+        create: { puuid, platform: "BR1", eloBucket, lastSampledAt: sampledAt },
+        update: { eloBucket, lastSampledAt: sampledAt },
+      }),
+    ),
   );
 
   return {

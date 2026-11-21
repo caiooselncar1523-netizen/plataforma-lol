@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test } from "vitest";
 import { NextRequest } from "next/server";
-import { POST } from "../src/app/api/v1/players/profile/route";
+import { POST } from "../../../src/app/api/v1/players/profile/route";
 
 function request(body: unknown): NextRequest {
   return new NextRequest("http://localhost/api/v1/players/profile", {

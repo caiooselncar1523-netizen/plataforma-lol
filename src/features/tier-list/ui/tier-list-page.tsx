@@ -99,6 +99,20 @@ function formatPercent(value: number): string {
   return `${value.toFixed(1).replace(".", ",")}%`;
 }
 
+function tierChangeText(change: ChampionEntry["tierChange"]): string {
+  if (change === "UP") return "Pontuação subiu em relação ao patch anterior";
+  if (change === "DOWN") return "Pontuação caiu em relação ao patch anterior";
+  if (change === "SAME") return "Pontuação sem mudança em relação ao patch anterior";
+  return "Sem dados do patch anterior";
+}
+
+function tierChangeSymbol(change: ChampionEntry["tierChange"]): string {
+  if (change === "UP") return "↑";
+  if (change === "DOWN") return "↓";
+  if (change === "SAME") return "=";
+  return "—";
+}
+
 function buildSearchText(entry: ChampionEntry): string {
   return normalizeText(`${entry.name} ${entry.englishName} ${entry.championId}`);
 }
@@ -389,9 +403,14 @@ function ChampionCard({
         <span className="card-tier" style={{ "--tier-color": tierColors[entry.tier] } as CSSProperties}>
           {entry.tier}
         </span>
-        {compare && entry.tierChange && entry.tierChange !== "SAME" ? (
-          <span className={`card-tier-change ${entry.tierChange === "UP" ? "change-up" : "change-down"}`}>
-            {entry.tierChange === "UP" ? "↑" : "↓"}
+        {compare ? (
+          <span
+            className={`card-tier-change ${entry.tierChange === "UP" ? "change-up" : entry.tierChange === "DOWN" ? "change-down" : ""}`}
+            title={tierChangeText(entry.tierChange)}
+            aria-label={tierChangeText(entry.tierChange)}
+            role="img"
+          >
+            {tierChangeSymbol(entry.tierChange)}
           </span>
         ) : null}
         {entry.lowSample ? <span className="sample-dot" title="Amostra baixa">!</span> : null}
@@ -1006,6 +1025,7 @@ export default function TierListPage() {
                       <th scope="col"><button type="button" onClick={() => setSort("pickRate")}>Pick rate</button></th>
                       <th scope="col"><button type="button" onClick={() => setSort("banRate")}>Ban rate</button></th>
                       <th scope="col">Partidas</th>
+                      {compare ? <th scope="col">Variação</th> : null}
                     </tr>
                   </thead>
                   <tbody>
@@ -1028,6 +1048,12 @@ export default function TierListPage() {
                           <td>{formatPercent(entry.pickRate)}</td>
                           <td>{formatPercent(entry.banRate)}</td>
                           <td>{entry.games.toLocaleString("pt-BR")}</td>
+                          {compare ? (
+                            <td title={tierChangeText(entry.tierChange)}>
+                              {tierChangeSymbol(entry.tierChange)}
+                              {entry.tierChange ? ` ${entry.tierChange}` : " N/D"}
+                            </td>
+                          ) : null}
                         </tr>
                       );
                     })}

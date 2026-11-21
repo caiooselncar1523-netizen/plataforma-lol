@@ -60,6 +60,21 @@ a aplicação podem ser iniciados separadamente com `npm.cmd run dev:worker` e
 `npm.cmd run dev:web`. Nunca copie chaves reais para arquivos versionados; use o
 `.env` local baseado em `.env.example`.
 
+## Testes
+
+- `npm.cmd test` executa as suítes unitária e de integração.
+- `npm.cmd run test:unit` executa somente testes unitários.
+- `npm.cmd run test:integration` executa testes das rotas e contratos de API.
+- `npm.cmd run test:coverage` gera relatório textual e HTML em `coverage/`.
+- `npm.cmd run test:e2e` executa o fluxo da tier list no Playwright, iniciando um
+  Next.js isolado em `localhost:3100` quando necessário.
+
+Na primeira execução do E2E, instale o navegador com
+`npx.cmd playwright install chromium`. Os testes unitários e de integração usam
+dados simulados; o E2E intercepta a API para testar filtros e comparação sem
+depender da amostra do banco. A cobertura do Vitest inclui módulos `.ts`, não
+componentes `.tsx`; a interface é validada pelo Playwright.
+
 ## Licença
 
 Este projeto está disponível sob a licença MIT. Consulte [LICENSE](LICENSE).

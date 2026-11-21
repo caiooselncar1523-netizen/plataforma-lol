@@ -18,7 +18,11 @@
     "db:migrate": "prisma migrate dev",
     "tierlist:collect": "tsx scripts/collect-tier-list.ts",
     "tierlist:aggregate": "tsx scripts/recompute-tier-list.ts",
-    "test": "node --import tsx --test"
+    "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@prisma/client": "^6.19.0",
@@ -29,12 +33,15 @@
     "react-dom": "^19.2.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.1",
     "@types/node": "^24.10.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "@vitest/coverage-v8": "^5.1.1",
     "concurrently": "^9.2.1",
     "prisma": "^6.19.0",
     "tsx": "^4.23.15",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^5.1.1"
   }
 }
